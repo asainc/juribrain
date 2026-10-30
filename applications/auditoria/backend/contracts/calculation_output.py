@@ -1,0 +1,46 @@
+"""Contratos de saída do motor e recomendações operacionais."""
+from __future__ import annotations
+
+from pydantic import Field
+
+from applications.auditoria.backend.calculation_policy import CalculationOrigin
+from applications.auditoria.backend.contracts.base import Contract, Month, Scalar
+from applications.auditoria.backend.contracts.calculation_parameters import CalculationParameters, DamageParameters
+
+
+class DataTable(Contract):
+    colunas: list[str]
+    linhas: list[list[Scalar]]
+
+
+class SummaryEntry(Contract):
+    campo: str
+    valor: str
+
+
+class CalculationMetadata(Contract):
+    entrada_sha256: str
+    politica_sha256: str
+    motor_sha256: str
+    indices_sha256: str
+    duracao_ms: float
+    revisao_humana_confirmada: bool
+
+
+class CalculationResponse(Contract):
+    origem_calculo: CalculationOrigin
+    numero_processo: str | None
+    identificador_calculo: str
+    memoria: DataTable
+    resumo: list[SummaryEntry]
+    parametros: CalculationParameters
+    parametros_por_dano: DamageParameters
+    metadata: CalculationMetadata
+
+
+class CalculationDefaults(Contract):
+    mes: Month
+    ano: int
+    competencia_recomendada: str | None = Field(default=None, pattern=r"^\d{4}-(0[1-9]|1[0-2])$")
+    ajustada_por_disponibilidade: bool = False
+    mensagem: str | None = None

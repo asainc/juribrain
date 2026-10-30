@@ -1,0 +1,7029 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Calculadora de Débitos Judiciais",
+    "version": "2.3.2"
+  },
+  "paths": {
+    "/api/v2/saude": {
+      "get": {
+        "tags": [
+          "Saúde"
+        ],
+        "summary": "Health",
+        "description": "Informa disponibilidade sem revelar configuração interna.",
+        "operationId": "health_api_v2_saude_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/documentos/upload": {
+      "post": {
+        "tags": [
+          "Documentos"
+        ],
+        "summary": "Upload",
+        "description": "A extração é iniciada no servidor imediatamente após a persistência.",
+        "operationId": "upload_api_v2_documentos_upload_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_api_v2_documentos_upload_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/documentos/processos": {
+      "get": {
+        "tags": [
+          "Documentos"
+        ],
+        "summary": "Processes",
+        "description": "Lista processos armazenados sem selecionar automaticamente nenhum na UI.",
+        "operationId": "processes_api_v2_documentos_processos_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ProcessSummary"
+                  },
+                  "type": "array",
+                  "title": "Response Processes Api V2 Documentos Processos Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/documentos/processos/{numero_processo}": {
+      "get": {
+        "tags": [
+          "Documentos"
+        ],
+        "summary": "Process Documents",
+        "description": "A seleção filtra no backend e evita misturar documentos de processos.",
+        "operationId": "process_documents_api_v2_documentos_processos__numero_processo__get",
+        "parameters": [
+          {
+            "name": "numero_processo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Numero Processo"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DocumentMetadata"
+                  },
+                  "title": "Response Process Documents Api V2 Documentos Processos  Numero Processo  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/documentos/{identificador_documento}/arquivo": {
+      "get": {
+        "tags": [
+          "Documentos"
+        ],
+        "summary": "File",
+        "description": "A autorização global da API também protege o conteúdo PDF.",
+        "operationId": "file_api_v2_documentos__identificador_documento__arquivo_get",
+        "parameters": [
+          {
+            "name": "identificador_documento",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Identificador Documento"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/documentos/parcelas/importar": {
+      "post": {
+        "tags": [
+          "Documentos"
+        ],
+        "summary": "Import Installments",
+        "description": "O limite também se aplica a planilhas antes de sua leitura pelo importador.",
+        "operationId": "import_installments_api_v2_documentos_parcelas_importar_post",
+        "parameters": [
+          {
+            "name": "verba_tipo",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "enum": [
+                "dano_material",
+                "dano_moral",
+                "honorarios",
+                "custas"
+              ],
+              "type": "string",
+              "title": "Verba Tipo"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_import_installments_api_v2_documentos_parcelas_importar_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Installment-Output"
+                  },
+                  "title": "Response Import Installments Api V2 Documentos Parcelas Importar Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/extracoes/configuracao": {
+      "get": {
+        "tags": [
+          "Extrações"
+        ],
+        "summary": "Configuration",
+        "description": "Expõe somente disponibilidade operacional da leitura local + geração corporativa.",
+        "operationId": "configuration_api_v2_extracoes_configuracao_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtractionConfiguration"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/extracoes": {
+      "post": {
+        "tags": [
+          "Extrações"
+        ],
+        "summary": "Start",
+        "description": "Retentativa manual é útil após configurar o deployment ou reiniciar o serviço.",
+        "operationId": "start_api_v2_extracoes_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExtractionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtractionStatus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/extracoes/{numero_processo}/status": {
+      "get": {
+        "tags": [
+          "Extrações"
+        ],
+        "summary": "Status",
+        "description": "Ausência de trabalho é 404; falha do provedor é estado explícito.",
+        "operationId": "status_api_v2_extracoes__numero_processo__status_get",
+        "parameters": [
+          {
+            "name": "numero_processo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Numero Processo"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtractionStatus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/extracoes/{numero_processo}/resultado": {
+      "get": {
+        "tags": [
+          "Extrações"
+        ],
+        "summary": "Result",
+        "description": "Somente extração consolidada é devolvida para revisão humana.",
+        "operationId": "result_api_v2_extracoes__numero_processo__resultado_get",
+        "parameters": [
+          {
+            "name": "numero_processo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Numero Processo"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtractionResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/calculos/padroes": {
+      "get": {
+        "tags": [
+          "Cálculos"
+        ],
+        "summary": "Defaults",
+        "description": "Recomenda competência sem ultrapassar a cobertura do índice selecionado.",
+        "operationId": "defaults_api_v2_calculos_padroes_get",
+        "parameters": [
+          {
+            "name": "indice",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Indice"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalculationDefaults"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/calculos/politica/{origem_calculo}": {
+      "get": {
+        "tags": [
+          "Cálculos"
+        ],
+        "summary": "Calculation Policy",
+        "description": "Expõe padrões e metadados oficiais sem duplicá-los no frontend.",
+        "operationId": "calculation_policy_api_v2_calculos_politica__origem_calculo__get",
+        "parameters": [
+          {
+            "name": "origem_calculo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "enum": [
+                "manual",
+                "processo"
+              ],
+              "type": "string",
+              "title": "Origem Calculo"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalculationPolicyView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/calculos/honorarios/preparar": {
+      "post": {
+        "tags": [
+          "Cálculos"
+        ],
+        "summary": "Prepare Fees",
+        "description": "Mostra os valores nominais para revisão antes da chamada ao motor.",
+        "operationId": "prepare_fees_api_v2_calculos_honorarios_preparar_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeePreparation"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Installment-Output"
+                  },
+                  "type": "array",
+                  "title": "Response Prepare Fees Api V2 Calculos Honorarios Preparar Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/calculos/historico": {
+      "get": {
+        "tags": [
+          "Cálculos"
+        ],
+        "summary": "History",
+        "description": "Lista cálculos paginados; as versões são carregadas somente após expansão.",
+        "operationId": "history_api_v2_calculos_historico_get",
+        "parameters": [
+          {
+            "name": "pagina",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Pagina"
+            }
+          },
+          {
+            "name": "tamanho_pagina",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Tamanho Pagina"
+            }
+          },
+          {
+            "name": "busca",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 120
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Busca"
+            }
+          },
+          {
+            "name": "origem",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "manual",
+                    "processo"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Origem"
+            }
+          },
+          {
+            "name": "estado",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "ativo",
+                    "arquivado",
+                    "cancelado"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Estado"
+            }
+          },
+          {
+            "name": "indice",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 120
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Indice"
+            }
+          },
+          {
+            "name": "criado_por",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 120
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Criado Por"
+            }
+          },
+          {
+            "name": "atualizado_de",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Atualizado De"
+            }
+          },
+          {
+            "name": "atualizado_ate",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Atualizado Ate"
+            }
+          },
+          {
+            "name": "ordenacao",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "processo",
+                "atualizado_desc",
+                "atualizado_asc",
+                "criado_desc",
+                "criado_asc"
+              ],
+              "type": "string",
+              "default": "processo",
+              "title": "Ordenacao"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalculationHistoryPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/calculos/{calculo_id}/versoes": {
+      "get": {
+        "tags": [
+          "Cálculos"
+        ],
+        "summary": "Versions",
+        "description": "Lazy loading das versões de um cálculo já localizado no histórico.",
+        "operationId": "versions_api_v2_calculos__calculo_id__versoes_get",
+        "parameters": [
+          {
+            "name": "calculo_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Calculo Id"
+            }
+          },
+          {
+            "name": "pagina",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Pagina"
+            }
+          },
+          {
+            "name": "tamanho_pagina",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 50,
+              "title": "Tamanho Pagina"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalculationVersionsPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/calculos/{calculo_id}/comparar": {
+      "get": {
+        "tags": [
+          "Cálculos"
+        ],
+        "summary": "Compare Versions",
+        "description": "Compara parâmetros, parcelas e impacto no total entre duas versões.",
+        "operationId": "compare_versions_api_v2_calculos__calculo_id__comparar_get",
+        "parameters": [
+          {
+            "name": "calculo_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Calculo Id"
+            }
+          },
+          {
+            "name": "versao_origem",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "title": "Versao Origem"
+            }
+          },
+          {
+            "name": "versao_destino",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "title": "Versao Destino"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalculationComparison"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/calculos/{calculo_id}/estado": {
+      "post": {
+        "tags": [
+          "Cálculos"
+        ],
+        "summary": "Change State",
+        "description": "Arquiva, cancela ou reativa o cálculo sem excluir histórico.",
+        "operationId": "change_state_api_v2_calculos__calculo_id__estado_post",
+        "parameters": [
+          {
+            "name": "calculo_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Calculo Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CalculationStateChange"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalculationStateResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/calculos/{calculo_id}/versoes/{versao}/execucoes": {
+      "get": {
+        "tags": [
+          "Cálculos"
+        ],
+        "summary": "Executions",
+        "description": "Pagina execuções técnicas sem carregar indefinidamente uma versão muito reexecutada.",
+        "operationId": "executions_api_v2_calculos__calculo_id__versoes__versao__execucoes_get",
+        "parameters": [
+          {
+            "name": "calculo_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Calculo Id"
+            }
+          },
+          {
+            "name": "versao",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Versao"
+            }
+          },
+          {
+            "name": "pagina",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Pagina"
+            }
+          },
+          {
+            "name": "tamanho_pagina",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Tamanho Pagina"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalculationExecutionsPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/calculos/{calculo_id}/versoes/{versao}": {
+      "get": {
+        "tags": [
+          "Cálculos"
+        ],
+        "summary": "Version Detail",
+        "description": "Reabre o snapshot exato de uma versão sem executar o motor novamente.",
+        "operationId": "version_detail_api_v2_calculos__calculo_id__versoes__versao__get",
+        "parameters": [
+          {
+            "name": "calculo_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Calculo Id"
+            }
+          },
+          {
+            "name": "versao",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Versao"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalculationVersionDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/calculos/{calculo_id}/versoes/{versao}/memoria-pdf": {
+      "get": {
+        "tags": [
+          "Cálculos"
+        ],
+        "summary": "Version Pdf",
+        "description": "Baixa a memória congelada quando aquela versão de negócio foi criada.",
+        "operationId": "version_pdf_api_v2_calculos__calculo_id__versoes__versao__memoria_pdf_get",
+        "parameters": [
+          {
+            "name": "calculo_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Calculo Id"
+            }
+          },
+          {
+            "name": "versao",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Versao"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/calculos/{calculo_id}/execucoes/{execucao_id}/memoria-pdf": {
+      "get": {
+        "tags": [
+          "Cálculos"
+        ],
+        "summary": "Execution Pdf",
+        "description": "Baixa a memória da execução atual, mesmo quando a versão foi reutilizada.",
+        "operationId": "execution_pdf_api_v2_calculos__calculo_id__execucoes__execucao_id__memoria_pdf_get",
+        "parameters": [
+          {
+            "name": "calculo_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Calculo Id"
+            }
+          },
+          {
+            "name": "execucao_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Execucao Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/calculos": {
+      "post": {
+        "tags": [
+          "Cálculos"
+        ],
+        "summary": "Calculate",
+        "description": "Calcula e versiona com controle otimista, inclusive a partir de versões históricas.",
+        "operationId": "calculate_api_v2_calculos_post",
+        "parameters": [
+          {
+            "name": "calculo_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Calculo Id"
+            }
+          },
+          {
+            "name": "versao_base",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Versao Base"
+            }
+          },
+          {
+            "name": "versao_atual_esperada",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Versao Atual Esperada"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CalculationRequest-Input"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionedCalculationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/calculos/memoria-pdf": {
+      "post": {
+        "tags": [
+          "Cálculos"
+        ],
+        "summary": "Memory Pdf",
+        "description": "Exporta o request atual sem criar estado funcional ou execução persistida.",
+        "operationId": "memory_pdf_api_v2_calculos_memoria_pdf_post",
+        "parameters": [
+          {
+            "name": "indices_sha256",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Indices Sha256"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CalculationRequest-Input"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/indices": {
+      "get": {
+        "tags": [
+          "Índices"
+        ],
+        "summary": "Options",
+        "description": "Devolve somente chaves registradas no motor.",
+        "operationId": "options_api_v2_indices_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/IndexOption"
+                  },
+                  "type": "array",
+                  "title": "Response Options Api V2 Indices Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/indices/status": {
+      "get": {
+        "tags": [
+          "Índices"
+        ],
+        "summary": "Status",
+        "description": "Informa estado real, sem afirmar atualização não verificada.",
+        "operationId": "status_api_v2_indices_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IndexStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/indices/atualizar": {
+      "post": {
+        "tags": [
+          "Índices"
+        ],
+        "summary": "Update",
+        "description": "Atualização segue assíncrona e pode ser acompanhada por polling.",
+        "operationId": "update_api_v2_indices_atualizar_post",
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IndexStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/lotes/importar": {
+      "post": {
+        "tags": [
+          "Lotes"
+        ],
+        "summary": "Import Batch",
+        "description": "Importar apenas prepara a prévia; não executa nem confirma o lote.",
+        "operationId": "import_batch_api_v2_lotes_importar_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_import_batch_api_v2_lotes_importar_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchImport"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/lotes/executar": {
+      "post": {
+        "tags": [
+          "Lotes"
+        ],
+        "summary": "Run",
+        "description": "Falhas são explícitas por processo; sucessos não são descartados.",
+        "operationId": "run_api_v2_lotes_executar_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/auditoria/parametros": {
+      "post": {
+        "tags": [
+          "Auditoria"
+        ],
+        "summary": "Record Parameter Change",
+        "description": "Registra uma alteração de parâmetro como evento imutável.",
+        "operationId": "record_parameter_change_api_v2_auditoria_parametros_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ParameterChangeInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParameterChangeRecord"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Auditoria"
+        ],
+        "summary": "List Parameter Changes",
+        "description": "Consulta por processo real ou por rascunho manual; exige exatamente um filtro.",
+        "operationId": "list_parameter_changes_api_v2_auditoria_parametros_get",
+        "parameters": [
+          {
+            "name": "numero_processo",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Numero Processo"
+            }
+          },
+          {
+            "name": "rascunho_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Rascunho Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ParameterChangeRecord"
+                  },
+                  "title": "Response List Parameter Changes Api V2 Auditoria Parametros Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/qualidade/revisoes": {
+      "post": {
+        "tags": [
+          "Qualidade IA"
+        ],
+        "summary": "Capture Review",
+        "description": "Registra IA × humano sem sobrescrever a predição original.",
+        "operationId": "capture_review_api_v2_qualidade_revisoes_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewSnapshotInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewCaptureResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/qualidade/resumo": {
+      "get": {
+        "tags": [
+          "Qualidade IA"
+        ],
+        "summary": "Quality Summary",
+        "operationId": "quality_summary_api_v2_qualidade_resumo_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QualitySummary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/qualidade/feedback": {
+      "get": {
+        "tags": [
+          "Qualidade IA"
+        ],
+        "summary": "Feedback Page",
+        "operationId": "feedback_page_api_v2_qualidade_feedback_get",
+        "parameters": [
+          {
+            "name": "pagina",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Pagina"
+            }
+          },
+          {
+            "name": "tamanho",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 25,
+              "title": "Tamanho"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": "pending",
+              "title": "Status"
+            }
+          },
+          {
+            "name": "campo",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Campo"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedbackPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/qualidade/feedback/{feedback_id}/curadoria": {
+      "post": {
+        "tags": [
+          "Qualidade IA"
+        ],
+        "summary": "Curate Feedback",
+        "operationId": "curate_feedback_api_v2_qualidade_feedback__feedback_id__curadoria_post",
+        "parameters": [
+          {
+            "name": "feedback_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Feedback Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeedbackCurationInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedbackEventRecord"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/qualidade/datasets/snapshot": {
+      "post": {
+        "tags": [
+          "Qualidade IA"
+        ],
+        "summary": "Snapshot Dataset",
+        "description": "Congela IDs/hashes dos exemplos aprovados; não duplica conteúdo documental.",
+        "operationId": "snapshot_dataset_api_v2_qualidade_datasets_snapshot_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetSnapshot"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/qualidade/finops": {
+      "get": {
+        "tags": [
+          "Qualidade IA"
+        ],
+        "summary": "Finops",
+        "operationId": "finops_api_v2_qualidade_finops_get",
+        "parameters": [
+          {
+            "name": "dias",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 365,
+              "minimum": 1,
+              "default": 30,
+              "title": "Dias"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FinOpsSummary"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AiUsage": {
+        "properties": {
+          "etapa": {
+            "type": "string",
+            "title": "Etapa"
+          },
+          "modelo": {
+            "type": "string",
+            "title": "Modelo"
+          },
+          "tokens_entrada": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tokens Entrada"
+          },
+          "tokens_entrada_cache": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tokens Entrada Cache"
+          },
+          "tokens_saida": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tokens Saida"
+          },
+          "tokens_total": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tokens Total"
+          },
+          "tokens_estimados_entrada": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tokens Estimados Entrada"
+          },
+          "tokens_estimados_saida": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tokens Estimados Saida"
+          },
+          "origem_tokens": {
+            "type": "string",
+            "enum": [
+              "gateway",
+              "estimativa_local",
+              "cache",
+              "indisponivel"
+            ],
+            "title": "Origem Tokens",
+            "default": "indisponivel"
+          },
+          "custo_estimado_usd": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,6}0*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Custo Estimado Usd"
+          },
+          "duracao_ms": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Duracao Ms"
+          },
+          "paginas_contexto": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paginas Contexto"
+          },
+          "caracteres_entrada": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caracteres Entrada"
+          },
+          "caracteres_saida": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caracteres Saida"
+          },
+          "cache_hit": {
+            "type": "boolean",
+            "title": "Cache Hit",
+            "default": false
+          },
+          "request_sha256": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64,
+                "minLength": 64
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Sha256"
+          },
+          "correcao_estrutural": {
+            "type": "boolean",
+            "title": "Correcao Estrutural",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "etapa",
+          "modelo",
+          "duracao_ms"
+        ],
+        "title": "AiUsage"
+      },
+      "AiUsageSummary": {
+        "properties": {
+          "chamadas": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Chamadas"
+          },
+          "chamadas_api": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Chamadas Api",
+            "default": 0
+          },
+          "acertos_cache": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Acertos Cache",
+            "default": 0
+          },
+          "tokens_entrada": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tokens Entrada"
+          },
+          "tokens_entrada_cache": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tokens Entrada Cache"
+          },
+          "tokens_saida": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tokens Saida"
+          },
+          "tokens_total": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tokens Total"
+          },
+          "tokens_estimados_total": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tokens Estimados Total"
+          },
+          "custo_estimado_usd": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,6}0*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Custo Estimado Usd"
+          },
+          "duracao_total_ms": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Duracao Total Ms",
+            "default": 0
+          },
+          "detalhamento": {
+            "items": {
+              "$ref": "#/components/schemas/AiUsage"
+            },
+            "type": "array",
+            "title": "Detalhamento"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "chamadas"
+        ],
+        "title": "AiUsageSummary"
+      },
+      "BatchImport": {
+        "properties": {
+          "processos": {
+            "items": {
+              "$ref": "#/components/schemas/CalculationDraft"
+            },
+            "type": "array",
+            "title": "Processos"
+          },
+          "erros": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Erros"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "processos",
+          "erros"
+        ],
+        "title": "BatchImport"
+      },
+      "BatchItem": {
+        "properties": {
+          "numero_processo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Numero Processo"
+          },
+          "resultado": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VersionedCalculationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "erro": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Erro"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "numero_processo"
+        ],
+        "title": "BatchItem"
+      },
+      "BatchRequest": {
+        "properties": {
+          "processos": {
+            "items": {
+              "$ref": "#/components/schemas/CalculationRequest-Input"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Processos"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "processos"
+        ],
+        "title": "BatchRequest"
+      },
+      "BatchResponse": {
+        "properties": {
+          "resultados": {
+            "items": {
+              "$ref": "#/components/schemas/BatchItem"
+            },
+            "type": "array",
+            "title": "Resultados"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "resultados"
+        ],
+        "title": "BatchResponse"
+      },
+      "Body_import_batch_api_v2_lotes_importar_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_import_batch_api_v2_lotes_importar_post"
+      },
+      "Body_import_installments_api_v2_documentos_parcelas_importar_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_import_installments_api_v2_documentos_parcelas_importar_post"
+      },
+      "Body_upload_api_v2_documentos_upload_post": {
+        "properties": {
+          "files": {
+            "items": {
+              "type": "string",
+              "format": "binary"
+            },
+            "type": "array",
+            "title": "Files"
+          }
+        },
+        "type": "object",
+        "required": [
+          "files"
+        ],
+        "title": "Body_upload_api_v2_documentos_upload_post"
+      },
+      "CalculationComparison": {
+        "properties": {
+          "calculo_id": {
+            "type": "string",
+            "pattern": "^calc_[0-9a-f]{32}$",
+            "title": "Calculo Id"
+          },
+          "versao_origem": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Versao Origem"
+          },
+          "versao_destino": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Versao Destino"
+          },
+          "total_origem": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Origem"
+          },
+          "total_destino": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Destino"
+          },
+          "diferenca_total": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Diferenca Total"
+          },
+          "diff": {
+            "$ref": "#/components/schemas/CalculationDiff"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "calculo_id",
+          "versao_origem",
+          "versao_destino",
+          "diff"
+        ],
+        "title": "CalculationComparison"
+      },
+      "CalculationDefaults": {
+        "properties": {
+          "mes": {
+            "type": "string",
+            "enum": [
+              "janeiro",
+              "fevereiro",
+              "março",
+              "abril",
+              "maio",
+              "junho",
+              "julho",
+              "agosto",
+              "setembro",
+              "outubro",
+              "novembro",
+              "dezembro"
+            ],
+            "title": "Mes"
+          },
+          "ano": {
+            "type": "integer",
+            "title": "Ano"
+          },
+          "competencia_recomendada": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Competencia Recomendada"
+          },
+          "ajustada_por_disponibilidade": {
+            "type": "boolean",
+            "title": "Ajustada Por Disponibilidade",
+            "default": false
+          },
+          "mensagem": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mensagem"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "mes",
+          "ano"
+        ],
+        "title": "CalculationDefaults"
+      },
+      "CalculationDiff": {
+        "properties": {
+          "campos": {
+            "items": {
+              "$ref": "#/components/schemas/CalculationFieldDiff"
+            },
+            "type": "array",
+            "title": "Campos"
+          },
+          "parcelas": {
+            "items": {
+              "$ref": "#/components/schemas/InstallmentDiff"
+            },
+            "type": "array",
+            "title": "Parcelas"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "CalculationDiff"
+      },
+      "CalculationDraft": {
+        "properties": {
+          "origem_calculo": {
+            "type": "string",
+            "enum": [
+              "manual",
+              "processo"
+            ],
+            "title": "Origem Calculo"
+          },
+          "numero_processo": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[0-9][0-9.\\-]{0,39}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Numero Processo"
+          },
+          "identificador_calculo": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80,
+                "minLength": 1,
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._/\\-]{0,79}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Identificador Calculo"
+          },
+          "parcelas": {
+            "items": {
+              "$ref": "#/components/schemas/Installment-Output"
+            },
+            "type": "array",
+            "maxItems": 10000,
+            "minItems": 1,
+            "title": "Parcelas"
+          },
+          "parametros": {
+            "$ref": "#/components/schemas/CalculationParameters-Output"
+          },
+          "parametros_por_dano": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DamageParameters-Output"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "revisao_humana_confirmada": {
+            "type": "boolean",
+            "title": "Revisao Humana Confirmada",
+            "default": false
+          },
+          "honorarios_sobre_danos_morais": {
+            "type": "boolean",
+            "title": "Honorarios Sobre Danos Morais",
+            "default": false
+          },
+          "competencia_automatica": {
+            "type": "boolean",
+            "title": "Competencia Automatica",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "origem_calculo",
+          "parcelas",
+          "parametros"
+        ],
+        "title": "CalculationDraft",
+        "description": "Entrada completa antes da confirmação humana definitiva."
+      },
+      "CalculationExecutionRef": {
+        "properties": {
+          "execucao_id": {
+            "type": "string",
+            "pattern": "^exec_[0-9a-f]{32}$",
+            "title": "Execucao Id"
+          },
+          "calculo_id": {
+            "type": "string",
+            "pattern": "^calc_[0-9a-f]{32}$",
+            "title": "Calculo Id"
+          },
+          "versao": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Versao"
+          },
+          "executada_em": {
+            "type": "string",
+            "title": "Executada Em"
+          },
+          "nova_versao": {
+            "type": "boolean",
+            "title": "Nova Versao",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "execucao_id",
+          "calculo_id",
+          "versao",
+          "executada_em"
+        ],
+        "title": "CalculationExecutionRef"
+      },
+      "CalculationExecutionSummary": {
+        "properties": {
+          "execucao_id": {
+            "type": "string",
+            "pattern": "^exec_[0-9a-f]{32}$",
+            "title": "Execucao Id"
+          },
+          "versao": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Versao"
+          },
+          "executada_em": {
+            "type": "string",
+            "title": "Executada Em"
+          },
+          "executada_por": {
+            "type": "string",
+            "title": "Executada Por"
+          },
+          "entrada_sha256": {
+            "type": "string",
+            "title": "Entrada Sha256"
+          },
+          "politica_sha256": {
+            "type": "string",
+            "title": "Politica Sha256"
+          },
+          "motor_sha256": {
+            "type": "string",
+            "title": "Motor Sha256"
+          },
+          "indices_sha256": {
+            "type": "string",
+            "title": "Indices Sha256"
+          },
+          "duracao_ms": {
+            "type": "number",
+            "title": "Duracao Ms"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "execucao_id",
+          "versao",
+          "executada_em",
+          "executada_por",
+          "entrada_sha256",
+          "politica_sha256",
+          "motor_sha256",
+          "indices_sha256",
+          "duracao_ms"
+        ],
+        "title": "CalculationExecutionSummary"
+      },
+      "CalculationExecutionsPage": {
+        "properties": {
+          "calculo_id": {
+            "type": "string",
+            "pattern": "^calc_[0-9a-f]{32}$",
+            "title": "Calculo Id"
+          },
+          "versao": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Versao"
+          },
+          "itens": {
+            "items": {
+              "$ref": "#/components/schemas/CalculationExecutionSummary"
+            },
+            "type": "array",
+            "title": "Itens"
+          },
+          "pagina": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Pagina"
+          },
+          "tamanho_pagina": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Tamanho Pagina"
+          },
+          "total_itens": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total Itens"
+          },
+          "total_paginas": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total Paginas"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "calculo_id",
+          "versao",
+          "itens",
+          "pagina",
+          "tamanho_pagina",
+          "total_itens",
+          "total_paginas"
+        ],
+        "title": "CalculationExecutionsPage"
+      },
+      "CalculationFieldDiff": {
+        "properties": {
+          "caminho": {
+            "type": "string",
+            "title": "Caminho"
+          },
+          "valor_anterior": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valor Anterior"
+          },
+          "valor_novo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valor Novo"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "caminho"
+        ],
+        "title": "CalculationFieldDiff"
+      },
+      "CalculationHistoryItem": {
+        "properties": {
+          "calculo_id": {
+            "type": "string",
+            "pattern": "^calc_[0-9a-f]{32}$",
+            "title": "Calculo Id"
+          },
+          "origem_calculo": {
+            "type": "string",
+            "enum": [
+              "manual",
+              "processo"
+            ],
+            "title": "Origem Calculo"
+          },
+          "identificador_calculo": {
+            "type": "string",
+            "title": "Identificador Calculo"
+          },
+          "numero_processo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Numero Processo"
+          },
+          "numero_processo_normalizado": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Numero Processo Normalizado"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "ativo",
+              "arquivado",
+              "cancelado"
+            ],
+            "title": "Estado"
+          },
+          "criado_em": {
+            "type": "string",
+            "title": "Criado Em"
+          },
+          "criado_por": {
+            "type": "string",
+            "title": "Criado Por"
+          },
+          "atualizado_em": {
+            "type": "string",
+            "title": "Atualizado Em"
+          },
+          "quantidade_versoes": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Quantidade Versoes"
+          },
+          "quantidade_execucoes": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Quantidade Execucoes"
+          },
+          "versao_atual": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Versao Atual"
+          },
+          "total_atual": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Atual"
+          },
+          "indice_atual": {
+            "type": "string",
+            "title": "Indice Atual"
+          },
+          "competencia_atualizacao_atual": {
+            "type": "string",
+            "title": "Competencia Atualizacao Atual"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "calculo_id",
+          "origem_calculo",
+          "identificador_calculo",
+          "estado",
+          "criado_em",
+          "criado_por",
+          "atualizado_em",
+          "quantidade_versoes",
+          "quantidade_execucoes",
+          "versao_atual",
+          "indice_atual",
+          "competencia_atualizacao_atual"
+        ],
+        "title": "CalculationHistoryItem"
+      },
+      "CalculationHistoryPage": {
+        "properties": {
+          "itens": {
+            "items": {
+              "$ref": "#/components/schemas/CalculationHistoryItem"
+            },
+            "type": "array",
+            "title": "Itens"
+          },
+          "pagina": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Pagina"
+          },
+          "tamanho_pagina": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Tamanho Pagina"
+          },
+          "total_itens": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total Itens"
+          },
+          "total_paginas": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total Paginas"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "itens",
+          "pagina",
+          "tamanho_pagina",
+          "total_itens",
+          "total_paginas"
+        ],
+        "title": "CalculationHistoryPage"
+      },
+      "CalculationMetadata": {
+        "properties": {
+          "entrada_sha256": {
+            "type": "string",
+            "title": "Entrada Sha256"
+          },
+          "politica_sha256": {
+            "type": "string",
+            "title": "Politica Sha256"
+          },
+          "motor_sha256": {
+            "type": "string",
+            "title": "Motor Sha256"
+          },
+          "indices_sha256": {
+            "type": "string",
+            "title": "Indices Sha256"
+          },
+          "duracao_ms": {
+            "type": "number",
+            "title": "Duracao Ms"
+          },
+          "revisao_humana_confirmada": {
+            "type": "boolean",
+            "title": "Revisao Humana Confirmada"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "entrada_sha256",
+          "politica_sha256",
+          "motor_sha256",
+          "indices_sha256",
+          "duracao_ms",
+          "revisao_humana_confirmada"
+        ],
+        "title": "CalculationMetadata"
+      },
+      "CalculationParameters-Input": {
+        "properties": {
+          "duplo_indice_flag": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duplo Indice Flag"
+          },
+          "duplo_indice_primeiro_indice": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duplo Indice Primeiro Indice"
+          },
+          "duplo_indice_primeiro_data_inicio": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duplo Indice Primeiro Data Inicio"
+          },
+          "duplo_indice_primeiro_data_fim": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duplo Indice Primeiro Data Fim"
+          },
+          "duplo_indice_primeiro_valor_parcela": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,16}|(?=[\\d.]{1,19}0*$)\\d{0,16}\\.\\d{0,2}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duplo Indice Primeiro Valor Parcela"
+          },
+          "duplo_indice_segundo_indice": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duplo Indice Segundo Indice"
+          },
+          "duplo_indice_segundo_data_inicio": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duplo Indice Segundo Data Inicio"
+          },
+          "duplo_indice_segundo_data_fim": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duplo Indice Segundo Data Fim"
+          },
+          "duplo_indice_segundo_valor_parcela": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,16}|(?=[\\d.]{1,19}0*$)\\d{0,16}\\.\\d{0,2}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duplo Indice Segundo Valor Parcela"
+          },
+          "compensacao_flag": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Compensacao Flag"
+          },
+          "compensacao_tipo_calculo": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "percentual",
+                  "fixo"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Compensacao Tipo Calculo"
+          },
+          "compensacao_valor": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,19}0*$)\\d{0,10}\\.\\d{0,8}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Compensacao Valor"
+          },
+          "prescricao_flag": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prescricao Flag"
+          },
+          "prescricao_anos": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 100.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prescricao Anos"
+          },
+          "prescricao_data_referencia_tipo": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "data_ajuizamento",
+                  "data_decisao",
+                  "data_ultima_parcela"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prescricao Data Referencia Tipo"
+          },
+          "prescricao_data_referencia": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prescricao Data Referencia"
+          },
+          "incidir_multa_sobre_juros_moratorios": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Incidir Multa Sobre Juros Moratorios"
+          },
+          "incidir_multa_sobre_parcelas_a_vencer": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Incidir Multa Sobre Parcelas A Vencer"
+          },
+          "incidir_honorarios_sobre_multa": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Incidir Honorarios Sobre Multa"
+          },
+          "multa_valor": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,19}0*$)\\d{0,10}\\.\\d{0,8}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Multa Valor"
+          },
+          "multa_tipo": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "percentual",
+                  "fixo"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Multa Tipo"
+          },
+          "honorarios": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,19}0*$)\\d{0,10}\\.\\d{0,8}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Honorarios"
+          },
+          "honorarios_tipo": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "percentual",
+                  "fixo"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Honorarios Tipo"
+          },
+          "art_523": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "nao_aplicar",
+                  "aplicar_multa",
+                  "aplicar_multa_honorarios"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Art 523"
+          },
+          "juros_moratorios_tipo": {
+            "type": "string",
+            "enum": [
+              "sem_juros",
+              "capitalizacao_simples",
+              "capitalizacao_composta",
+              "juros_moratorios_stj1368_lei_14905",
+              "taxa_legal_12_aa_6_aa",
+              "taxa_legal_diaria_selic_ipcae",
+              "taxa_legal",
+              "juros_moratorios_ctn_lei_14905"
+            ],
+            "title": "Juros Moratorios Tipo"
+          },
+          "juros_moratorios_taxa": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,19}0*$)\\d{0,10}\\.\\d{0,8}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Juros Moratorios Taxa"
+          },
+          "juros_moratorios_periodicidade": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "diaria",
+                  "mensal",
+                  "anual"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Juros Moratorios Periodicidade"
+          },
+          "juros_moratorios_pro_rata": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Juros Moratorios Pro Rata"
+          },
+          "juros_moratorios_data_inicio": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Juros Moratorios Data Inicio"
+          },
+          "mes_atualizacao": {
+            "type": "string",
+            "enum": [
+              "janeiro",
+              "fevereiro",
+              "março",
+              "abril",
+              "maio",
+              "junho",
+              "julho",
+              "agosto",
+              "setembro",
+              "outubro",
+              "novembro",
+              "dezembro"
+            ],
+            "title": "Mes Atualizacao"
+          },
+          "ano_atualizacao": {
+            "type": "integer",
+            "maximum": 2200.0,
+            "minimum": 1900.0,
+            "title": "Ano Atualizacao"
+          },
+          "indice": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Indice"
+          },
+          "deflacionar_valor_nominal": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deflacionar Valor Nominal"
+          },
+          "competencia_final_taxa_legal": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Competencia Final Taxa Legal"
+          },
+          "valor_dobrado_flag": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valor Dobrado Flag"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "juros_moratorios_tipo",
+          "mes_atualizacao",
+          "ano_atualizacao",
+          "indice"
+        ],
+        "title": "CalculationParameters",
+        "description": "Contrato externo composto; o domínio interno usa uma representação aninhada."
+      },
+      "CalculationParameters-Output": {
+        "properties": {
+          "duplo_indice_flag": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duplo Indice Flag"
+          },
+          "duplo_indice_primeiro_indice": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duplo Indice Primeiro Indice"
+          },
+          "duplo_indice_primeiro_data_inicio": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duplo Indice Primeiro Data Inicio"
+          },
+          "duplo_indice_primeiro_data_fim": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duplo Indice Primeiro Data Fim"
+          },
+          "duplo_indice_primeiro_valor_parcela": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,16}|(?=[\\d.]{1,19}0*$)\\d{0,16}\\.\\d{0,2}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duplo Indice Primeiro Valor Parcela"
+          },
+          "duplo_indice_segundo_indice": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duplo Indice Segundo Indice"
+          },
+          "duplo_indice_segundo_data_inicio": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duplo Indice Segundo Data Inicio"
+          },
+          "duplo_indice_segundo_data_fim": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duplo Indice Segundo Data Fim"
+          },
+          "duplo_indice_segundo_valor_parcela": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,16}|(?=[\\d.]{1,19}0*$)\\d{0,16}\\.\\d{0,2}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duplo Indice Segundo Valor Parcela"
+          },
+          "compensacao_flag": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Compensacao Flag"
+          },
+          "compensacao_tipo_calculo": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "percentual",
+                  "fixo"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Compensacao Tipo Calculo"
+          },
+          "compensacao_valor": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,19}0*$)\\d{0,10}\\.\\d{0,8}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Compensacao Valor"
+          },
+          "prescricao_flag": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prescricao Flag"
+          },
+          "prescricao_anos": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 100.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prescricao Anos"
+          },
+          "prescricao_data_referencia_tipo": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "data_ajuizamento",
+                  "data_decisao",
+                  "data_ultima_parcela"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prescricao Data Referencia Tipo"
+          },
+          "prescricao_data_referencia": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prescricao Data Referencia"
+          },
+          "incidir_multa_sobre_juros_moratorios": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Incidir Multa Sobre Juros Moratorios"
+          },
+          "incidir_multa_sobre_parcelas_a_vencer": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Incidir Multa Sobre Parcelas A Vencer"
+          },
+          "incidir_honorarios_sobre_multa": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Incidir Honorarios Sobre Multa"
+          },
+          "multa_valor": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,19}0*$)\\d{0,10}\\.\\d{0,8}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Multa Valor"
+          },
+          "multa_tipo": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "percentual",
+                  "fixo"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Multa Tipo"
+          },
+          "honorarios": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,19}0*$)\\d{0,10}\\.\\d{0,8}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Honorarios"
+          },
+          "honorarios_tipo": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "percentual",
+                  "fixo"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Honorarios Tipo"
+          },
+          "art_523": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "nao_aplicar",
+                  "aplicar_multa",
+                  "aplicar_multa_honorarios"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Art 523"
+          },
+          "juros_moratorios_tipo": {
+            "type": "string",
+            "enum": [
+              "sem_juros",
+              "capitalizacao_simples",
+              "capitalizacao_composta",
+              "juros_moratorios_stj1368_lei_14905",
+              "taxa_legal_12_aa_6_aa",
+              "taxa_legal_diaria_selic_ipcae",
+              "taxa_legal",
+              "juros_moratorios_ctn_lei_14905"
+            ],
+            "title": "Juros Moratorios Tipo"
+          },
+          "juros_moratorios_taxa": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,19}0*$)\\d{0,10}\\.\\d{0,8}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Juros Moratorios Taxa"
+          },
+          "juros_moratorios_periodicidade": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "diaria",
+                  "mensal",
+                  "anual"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Juros Moratorios Periodicidade"
+          },
+          "juros_moratorios_pro_rata": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Juros Moratorios Pro Rata"
+          },
+          "juros_moratorios_data_inicio": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Juros Moratorios Data Inicio"
+          },
+          "mes_atualizacao": {
+            "type": "string",
+            "enum": [
+              "janeiro",
+              "fevereiro",
+              "março",
+              "abril",
+              "maio",
+              "junho",
+              "julho",
+              "agosto",
+              "setembro",
+              "outubro",
+              "novembro",
+              "dezembro"
+            ],
+            "title": "Mes Atualizacao"
+          },
+          "ano_atualizacao": {
+            "type": "integer",
+            "maximum": 2200.0,
+            "minimum": 1900.0,
+            "title": "Ano Atualizacao"
+          },
+          "indice": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Indice"
+          },
+          "deflacionar_valor_nominal": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deflacionar Valor Nominal"
+          },
+          "competencia_final_taxa_legal": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Competencia Final Taxa Legal"
+          },
+          "valor_dobrado_flag": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valor Dobrado Flag"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "juros_moratorios_tipo",
+          "mes_atualizacao",
+          "ano_atualizacao",
+          "indice"
+        ],
+        "title": "CalculationParameters",
+        "description": "Contrato externo composto; o domínio interno usa uma representação aninhada."
+      },
+      "CalculationPolicyView": {
+        "properties": {
+          "origem_calculo": {
+            "type": "string",
+            "enum": [
+              "manual",
+              "processo"
+            ],
+            "title": "Origem Calculo"
+          },
+          "parametros_padrao": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Parametros Padrao"
+          },
+          "campos_obrigatorios": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Campos Obrigatorios"
+          },
+          "catalogo": {
+            "items": {
+              "$ref": "#/components/schemas/ParameterCatalogItem"
+            },
+            "type": "array",
+            "title": "Catalogo"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "origem_calculo",
+          "parametros_padrao",
+          "campos_obrigatorios",
+          "catalogo"
+        ],
+        "title": "CalculationPolicyView"
+      },
+      "CalculationRequest-Input": {
+        "properties": {
+          "origem_calculo": {
+            "type": "string",
+            "enum": [
+              "manual",
+              "processo"
+            ],
+            "title": "Origem Calculo"
+          },
+          "numero_processo": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[0-9][0-9.\\-]{0,39}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Numero Processo"
+          },
+          "identificador_calculo": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80,
+                "minLength": 1,
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._/\\-]{0,79}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Identificador Calculo"
+          },
+          "parcelas": {
+            "items": {
+              "$ref": "#/components/schemas/Installment-Input"
+            },
+            "type": "array",
+            "maxItems": 10000,
+            "minItems": 1,
+            "title": "Parcelas"
+          },
+          "parametros": {
+            "$ref": "#/components/schemas/CalculationParameters-Input"
+          },
+          "parametros_por_dano": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DamageParameters-Input"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "revisao_humana_confirmada": {
+            "type": "boolean",
+            "const": true,
+            "title": "Revisao Humana Confirmada"
+          },
+          "honorarios_sobre_danos_morais": {
+            "type": "boolean",
+            "title": "Honorarios Sobre Danos Morais",
+            "default": false
+          },
+          "competencia_automatica": {
+            "type": "boolean",
+            "title": "Competencia Automatica",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "origem_calculo",
+          "parcelas",
+          "parametros",
+          "revisao_humana_confirmada"
+        ],
+        "title": "CalculationRequest"
+      },
+      "CalculationRequest-Output": {
+        "properties": {
+          "origem_calculo": {
+            "type": "string",
+            "enum": [
+              "manual",
+              "processo"
+            ],
+            "title": "Origem Calculo"
+          },
+          "numero_processo": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[0-9][0-9.\\-]{0,39}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Numero Processo"
+          },
+          "identificador_calculo": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80,
+                "minLength": 1,
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._/\\-]{0,79}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Identificador Calculo"
+          },
+          "parcelas": {
+            "items": {
+              "$ref": "#/components/schemas/Installment-Output"
+            },
+            "type": "array",
+            "maxItems": 10000,
+            "minItems": 1,
+            "title": "Parcelas"
+          },
+          "parametros": {
+            "$ref": "#/components/schemas/CalculationParameters-Output"
+          },
+          "parametros_por_dano": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DamageParameters-Output"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "revisao_humana_confirmada": {
+            "type": "boolean",
+            "const": true,
+            "title": "Revisao Humana Confirmada"
+          },
+          "honorarios_sobre_danos_morais": {
+            "type": "boolean",
+            "title": "Honorarios Sobre Danos Morais",
+            "default": false
+          },
+          "competencia_automatica": {
+            "type": "boolean",
+            "title": "Competencia Automatica",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "origem_calculo",
+          "parcelas",
+          "parametros",
+          "revisao_humana_confirmada"
+        ],
+        "title": "CalculationRequest"
+      },
+      "CalculationResponse": {
+        "properties": {
+          "origem_calculo": {
+            "type": "string",
+            "enum": [
+              "manual",
+              "processo"
+            ],
+            "title": "Origem Calculo"
+          },
+          "numero_processo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Numero Processo"
+          },
+          "identificador_calculo": {
+            "type": "string",
+            "title": "Identificador Calculo"
+          },
+          "memoria": {
+            "$ref": "#/components/schemas/DataTable"
+          },
+          "resumo": {
+            "items": {
+              "$ref": "#/components/schemas/SummaryEntry"
+            },
+            "type": "array",
+            "title": "Resumo"
+          },
+          "parametros": {
+            "$ref": "#/components/schemas/CalculationParameters-Output"
+          },
+          "parametros_por_dano": {
+            "$ref": "#/components/schemas/DamageParameters-Output"
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/CalculationMetadata"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "origem_calculo",
+          "numero_processo",
+          "identificador_calculo",
+          "memoria",
+          "resumo",
+          "parametros",
+          "parametros_por_dano",
+          "metadata"
+        ],
+        "title": "CalculationResponse"
+      },
+      "CalculationStateChange": {
+        "properties": {
+          "estado": {
+            "type": "string",
+            "enum": [
+              "ativo",
+              "arquivado",
+              "cancelado"
+            ],
+            "title": "Estado"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "estado"
+        ],
+        "title": "CalculationStateChange"
+      },
+      "CalculationStateResult": {
+        "properties": {
+          "calculo_id": {
+            "type": "string",
+            "pattern": "^calc_[0-9a-f]{32}$",
+            "title": "Calculo Id"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "ativo",
+              "arquivado",
+              "cancelado"
+            ],
+            "title": "Estado"
+          },
+          "atualizado_em": {
+            "type": "string",
+            "title": "Atualizado Em"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "calculo_id",
+          "estado",
+          "atualizado_em"
+        ],
+        "title": "CalculationStateResult"
+      },
+      "CalculationVersionDetail": {
+        "properties": {
+          "calculo_id": {
+            "type": "string",
+            "pattern": "^calc_[0-9a-f]{32}$",
+            "title": "Calculo Id"
+          },
+          "origem_calculo": {
+            "type": "string",
+            "enum": [
+              "manual",
+              "processo"
+            ],
+            "title": "Origem Calculo"
+          },
+          "identificador_calculo": {
+            "type": "string",
+            "title": "Identificador Calculo"
+          },
+          "numero_processo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Numero Processo"
+          },
+          "estado_calculo": {
+            "type": "string",
+            "enum": [
+              "ativo",
+              "arquivado",
+              "cancelado"
+            ],
+            "title": "Estado Calculo",
+            "default": "ativo"
+          },
+          "versao": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Versao"
+          },
+          "versao_atual": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Versao Atual"
+          },
+          "versao_base": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Versao Base"
+          },
+          "criado_em": {
+            "type": "string",
+            "title": "Criado Em"
+          },
+          "criado_por": {
+            "type": "string",
+            "title": "Criado Por"
+          },
+          "campos_alterados": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Campos Alterados"
+          },
+          "diff": {
+            "$ref": "#/components/schemas/CalculationDiff"
+          },
+          "quantidade_execucoes": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Quantidade Execucoes",
+            "default": 1
+          },
+          "requisicao": {
+            "$ref": "#/components/schemas/CalculationRequest-Output"
+          },
+          "resultado": {
+            "$ref": "#/components/schemas/CalculationResponse"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "calculo_id",
+          "origem_calculo",
+          "identificador_calculo",
+          "versao",
+          "versao_atual",
+          "criado_em",
+          "criado_por",
+          "requisicao",
+          "resultado"
+        ],
+        "title": "CalculationVersionDetail"
+      },
+      "CalculationVersionRef": {
+        "properties": {
+          "calculo_id": {
+            "type": "string",
+            "pattern": "^calc_[0-9a-f]{32}$",
+            "title": "Calculo Id"
+          },
+          "versao": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Versao"
+          },
+          "versao_base": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Versao Base"
+          },
+          "criado_em": {
+            "type": "string",
+            "title": "Criado Em"
+          },
+          "criada": {
+            "type": "boolean",
+            "title": "Criada",
+            "default": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "calculo_id",
+          "versao",
+          "criado_em"
+        ],
+        "title": "CalculationVersionRef"
+      },
+      "CalculationVersionSummary": {
+        "properties": {
+          "versao": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Versao"
+          },
+          "versao_base": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Versao Base"
+          },
+          "criado_em": {
+            "type": "string",
+            "title": "Criado Em"
+          },
+          "criado_por": {
+            "type": "string",
+            "title": "Criado Por"
+          },
+          "total_geral": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Geral"
+          },
+          "indice": {
+            "type": "string",
+            "title": "Indice"
+          },
+          "competencia_atualizacao": {
+            "type": "string",
+            "title": "Competencia Atualizacao"
+          },
+          "entrada_sha256": {
+            "type": "string",
+            "title": "Entrada Sha256"
+          },
+          "indices_sha256": {
+            "type": "string",
+            "title": "Indices Sha256"
+          },
+          "campos_alterados": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Campos Alterados"
+          },
+          "diff": {
+            "$ref": "#/components/schemas/CalculationDiff"
+          },
+          "quantidade_execucoes": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Quantidade Execucoes",
+            "default": 1
+          },
+          "ultima_execucao_em": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ultima Execucao Em"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "versao",
+          "criado_em",
+          "criado_por",
+          "indice",
+          "competencia_atualizacao",
+          "entrada_sha256",
+          "indices_sha256"
+        ],
+        "title": "CalculationVersionSummary"
+      },
+      "CalculationVersionsPage": {
+        "properties": {
+          "calculo_id": {
+            "type": "string",
+            "pattern": "^calc_[0-9a-f]{32}$",
+            "title": "Calculo Id"
+          },
+          "itens": {
+            "items": {
+              "$ref": "#/components/schemas/CalculationVersionSummary"
+            },
+            "type": "array",
+            "title": "Itens"
+          },
+          "pagina": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Pagina"
+          },
+          "tamanho_pagina": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Tamanho Pagina"
+          },
+          "total_itens": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total Itens"
+          },
+          "total_paginas": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total Paginas"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "calculo_id",
+          "itens",
+          "pagina",
+          "tamanho_pagina",
+          "total_itens",
+          "total_paginas"
+        ],
+        "title": "CalculationVersionsPage"
+      },
+      "ChronologyDecision": {
+        "properties": {
+          "campo": {
+            "type": "string",
+            "title": "Campo"
+          },
+          "valor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valor"
+          },
+          "documento": {
+            "type": "string",
+            "title": "Documento"
+          },
+          "pagina": {
+            "type": "integer",
+            "title": "Pagina"
+          },
+          "sequencia": {
+            "type": "integer",
+            "title": "Sequencia"
+          },
+          "natureza": {
+            "type": "string",
+            "enum": [
+              "pedido",
+              "fato",
+              "comando_decisorio",
+              "fundamentacao",
+              "classificacao_documental",
+              "indeterminado"
+            ],
+            "title": "Natureza"
+          },
+          "efeito": {
+            "type": "string",
+            "enum": [
+              "informa",
+              "mantem",
+              "altera",
+              "afasta",
+              "majora",
+              "reduz",
+              "substitui",
+              "nao_se_aplica"
+            ],
+            "title": "Efeito"
+          },
+          "motivo": {
+            "type": "string",
+            "title": "Motivo"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "campo",
+          "valor",
+          "documento",
+          "pagina",
+          "sequencia",
+          "natureza",
+          "efeito",
+          "motivo"
+        ],
+        "title": "ChronologyDecision"
+      },
+      "DamageFinancialCriteria-Input": {
+        "properties": {
+          "juros_moratorios_tipo": {
+            "type": "string",
+            "enum": [
+              "sem_juros",
+              "capitalizacao_simples",
+              "capitalizacao_composta",
+              "juros_moratorios_stj1368_lei_14905",
+              "taxa_legal_12_aa_6_aa",
+              "taxa_legal_diaria_selic_ipcae",
+              "taxa_legal",
+              "juros_moratorios_ctn_lei_14905"
+            ],
+            "title": "Juros Moratorios Tipo"
+          },
+          "juros_moratorios_taxa": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,19}0*$)\\d{0,10}\\.\\d{0,8}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Juros Moratorios Taxa"
+          },
+          "juros_moratorios_periodicidade": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "diaria",
+                  "mensal",
+                  "anual"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Juros Moratorios Periodicidade"
+          },
+          "juros_moratorios_pro_rata": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Juros Moratorios Pro Rata"
+          },
+          "juros_moratorios_data_inicio": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Juros Moratorios Data Inicio"
+          },
+          "mes_atualizacao": {
+            "type": "string",
+            "enum": [
+              "janeiro",
+              "fevereiro",
+              "março",
+              "abril",
+              "maio",
+              "junho",
+              "julho",
+              "agosto",
+              "setembro",
+              "outubro",
+              "novembro",
+              "dezembro"
+            ],
+            "title": "Mes Atualizacao"
+          },
+          "ano_atualizacao": {
+            "type": "integer",
+            "maximum": 2200.0,
+            "minimum": 1900.0,
+            "title": "Ano Atualizacao"
+          },
+          "indice": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Indice"
+          },
+          "deflacionar_valor_nominal": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deflacionar Valor Nominal"
+          },
+          "competencia_final_taxa_legal": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Competencia Final Taxa Legal"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "juros_moratorios_tipo",
+          "mes_atualizacao",
+          "ano_atualizacao",
+          "indice"
+        ],
+        "title": "DamageFinancialCriteria",
+        "description": "Critérios financeiros próprios de uma natureza de dano.\n\nDano material e dano moral podem usar índices, competência final, termo\ninicial e regime de juros distintos. Estes campos são intencionalmente\nseparados dos parâmetros globais do processo."
+      },
+      "DamageFinancialCriteria-Output": {
+        "properties": {
+          "juros_moratorios_tipo": {
+            "type": "string",
+            "enum": [
+              "sem_juros",
+              "capitalizacao_simples",
+              "capitalizacao_composta",
+              "juros_moratorios_stj1368_lei_14905",
+              "taxa_legal_12_aa_6_aa",
+              "taxa_legal_diaria_selic_ipcae",
+              "taxa_legal",
+              "juros_moratorios_ctn_lei_14905"
+            ],
+            "title": "Juros Moratorios Tipo"
+          },
+          "juros_moratorios_taxa": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,19}0*$)\\d{0,10}\\.\\d{0,8}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Juros Moratorios Taxa"
+          },
+          "juros_moratorios_periodicidade": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "diaria",
+                  "mensal",
+                  "anual"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Juros Moratorios Periodicidade"
+          },
+          "juros_moratorios_pro_rata": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Juros Moratorios Pro Rata"
+          },
+          "juros_moratorios_data_inicio": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Juros Moratorios Data Inicio"
+          },
+          "mes_atualizacao": {
+            "type": "string",
+            "enum": [
+              "janeiro",
+              "fevereiro",
+              "março",
+              "abril",
+              "maio",
+              "junho",
+              "julho",
+              "agosto",
+              "setembro",
+              "outubro",
+              "novembro",
+              "dezembro"
+            ],
+            "title": "Mes Atualizacao"
+          },
+          "ano_atualizacao": {
+            "type": "integer",
+            "maximum": 2200.0,
+            "minimum": 1900.0,
+            "title": "Ano Atualizacao"
+          },
+          "indice": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Indice"
+          },
+          "deflacionar_valor_nominal": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deflacionar Valor Nominal"
+          },
+          "competencia_final_taxa_legal": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Competencia Final Taxa Legal"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "juros_moratorios_tipo",
+          "mes_atualizacao",
+          "ano_atualizacao",
+          "indice"
+        ],
+        "title": "DamageFinancialCriteria",
+        "description": "Critérios financeiros próprios de uma natureza de dano.\n\nDano material e dano moral podem usar índices, competência final, termo\ninicial e regime de juros distintos. Estes campos são intencionalmente\nseparados dos parâmetros globais do processo."
+      },
+      "DamageParameters-Input": {
+        "properties": {
+          "dano_material": {
+            "$ref": "#/components/schemas/DamageFinancialCriteria-Input"
+          },
+          "dano_moral": {
+            "$ref": "#/components/schemas/DamageFinancialCriteria-Input"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "dano_material",
+          "dano_moral"
+        ],
+        "title": "DamageParameters",
+        "description": "Critérios independentes para dano material e dano moral."
+      },
+      "DamageParameters-Output": {
+        "properties": {
+          "dano_material": {
+            "$ref": "#/components/schemas/DamageFinancialCriteria-Output"
+          },
+          "dano_moral": {
+            "$ref": "#/components/schemas/DamageFinancialCriteria-Output"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "dano_material",
+          "dano_moral"
+        ],
+        "title": "DamageParameters",
+        "description": "Critérios independentes para dano material e dano moral."
+      },
+      "DataTable": {
+        "properties": {
+          "colunas": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Colunas"
+          },
+          "linhas": {
+            "items": {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Linhas"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "colunas",
+          "linhas"
+        ],
+        "title": "DataTable"
+      },
+      "DatasetSnapshot": {
+        "properties": {
+          "identificador": {
+            "type": "string",
+            "title": "Identificador"
+          },
+          "criado_em": {
+            "type": "string",
+            "title": "Criado Em"
+          },
+          "criado_por": {
+            "type": "string",
+            "title": "Criado Por"
+          },
+          "sha256": {
+            "type": "string",
+            "title": "Sha256"
+          },
+          "quantidade_exemplos": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Quantidade Exemplos"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "identificador",
+          "criado_em",
+          "criado_por",
+          "sha256",
+          "quantidade_exemplos"
+        ],
+        "title": "DatasetSnapshot"
+      },
+      "DocumentMetadata": {
+        "properties": {
+          "identificador": {
+            "type": "string",
+            "title": "Identificador"
+          },
+          "numero_processo": {
+            "type": "string",
+            "title": "Numero Processo"
+          },
+          "nome": {
+            "type": "string",
+            "title": "Nome"
+          },
+          "sha256": {
+            "type": "string",
+            "title": "Sha256"
+          },
+          "tamanho_bytes": {
+            "type": "integer",
+            "title": "Tamanho Bytes"
+          },
+          "paginas": {
+            "type": "integer",
+            "title": "Paginas"
+          },
+          "classificacao": {
+            "type": "string",
+            "title": "Classificacao"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "identificador",
+          "numero_processo",
+          "nome",
+          "sha256",
+          "tamanho_bytes",
+          "paginas",
+          "classificacao"
+        ],
+        "title": "DocumentMetadata"
+      },
+      "ExtractionConfiguration": {
+        "properties": {
+          "provedor": {
+            "type": "string",
+            "const": "bradesco_iagen",
+            "title": "Provedor",
+            "default": "bradesco_iagen"
+          },
+          "configurada": {
+            "type": "boolean",
+            "title": "Configurada"
+          },
+          "modelo": {
+            "type": "string",
+            "title": "Modelo"
+          },
+          "mensagem": {
+            "type": "string",
+            "title": "Mensagem"
+          },
+          "leitura_documental": {
+            "type": "string",
+            "title": "Leitura Documental"
+          },
+          "tokens_disponiveis": {
+            "type": "boolean",
+            "title": "Tokens Disponiveis",
+            "default": false
+          },
+          "custo_disponivel": {
+            "type": "boolean",
+            "title": "Custo Disponivel",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "configurada",
+          "modelo",
+          "mensagem",
+          "leitura_documental"
+        ],
+        "title": "ExtractionConfiguration"
+      },
+      "ExtractionRequest": {
+        "properties": {
+          "numero_processo": {
+            "type": "string",
+            "pattern": "^[0-9][0-9.\\-]{0,39}$",
+            "title": "Numero Processo"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "numero_processo"
+        ],
+        "title": "ExtractionRequest"
+      },
+      "ExtractionResult": {
+        "properties": {
+          "numero_processo": {
+            "type": "string",
+            "title": "Numero Processo"
+          },
+          "campos": {
+            "items": {
+              "$ref": "#/components/schemas/FieldEvidence"
+            },
+            "type": "array",
+            "title": "Campos"
+          },
+          "parcelas": {
+            "items": {
+              "$ref": "#/components/schemas/Installment-Output"
+            },
+            "type": "array",
+            "title": "Parcelas"
+          },
+          "alertas": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Alertas"
+          },
+          "versao_prompts": {
+            "type": "string",
+            "title": "Versao Prompts"
+          },
+          "parametros_consolidados": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Parametros Consolidados"
+          },
+          "decisoes_cronologicas": {
+            "items": {
+              "$ref": "#/components/schemas/ChronologyDecision"
+            },
+            "type": "array",
+            "title": "Decisoes Cronologicas"
+          },
+          "ajustes_operacionais": {
+            "items": {
+              "$ref": "#/components/schemas/OperationalAdjustment"
+            },
+            "type": "array",
+            "title": "Ajustes Operacionais"
+          },
+          "honorarios_sobre_danos_morais": {
+            "type": "boolean",
+            "title": "Honorarios Sobre Danos Morais",
+            "default": false
+          },
+          "competencia_automatica": {
+            "type": "boolean",
+            "title": "Competencia Automatica",
+            "default": false
+          },
+          "uso_ia": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AiUsageSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "numero_processo",
+          "campos",
+          "parcelas",
+          "alertas",
+          "versao_prompts"
+        ],
+        "title": "ExtractionResult"
+      },
+      "ExtractionStatus": {
+        "properties": {
+          "numero_processo": {
+            "type": "string",
+            "title": "Numero Processo"
+          },
+          "identificador": {
+            "type": "string",
+            "title": "Identificador"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "aguardando",
+              "executando",
+              "pronto",
+              "falha",
+              "bloqueada",
+              "interrompida"
+            ],
+            "title": "Estado"
+          },
+          "etapa": {
+            "type": "string",
+            "title": "Etapa"
+          },
+          "mensagem": {
+            "type": "string",
+            "title": "Mensagem"
+          },
+          "atualizado_em": {
+            "type": "string",
+            "title": "Atualizado Em"
+          },
+          "codigo_erro": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Codigo Erro"
+          },
+          "uso_ia": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AiUsageSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "numero_processo",
+          "identificador",
+          "estado",
+          "etapa",
+          "mensagem",
+          "atualizado_em"
+        ],
+        "title": "ExtractionStatus"
+      },
+      "FeePreparation": {
+        "properties": {
+          "parcelas": {
+            "items": {
+              "$ref": "#/components/schemas/Installment-Input"
+            },
+            "type": "array",
+            "maxItems": 10000,
+            "title": "Parcelas"
+          },
+          "percentual": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,19}0*$)\\d{0,10}\\.\\d{0,8}0*$)"
+              }
+            ],
+            "title": "Percentual"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "parcelas",
+          "percentual"
+        ],
+        "title": "FeePreparation"
+      },
+      "FeedbackCurationInput": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "approved",
+              "rejected"
+            ],
+            "title": "Status"
+          },
+          "motivo_codigo": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "confirmado_sem_alteracao",
+                  "decisao_posterior_prevalece",
+                  "documento_incorreto",
+                  "pagina_incorreta",
+                  "valor_interpretado_incorretamente",
+                  "data_interpretada_incorretamente",
+                  "regra_nao_se_aplica",
+                  "campo_ausente_no_documento",
+                  "contrato_incorreto",
+                  "parcela_associada_ao_contrato_errado",
+                  "classificacao_documento_incorreta",
+                  "ambiguidade_documental",
+                  "adicao_manual",
+                  "nao_informado",
+                  "outro"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Motivo Codigo"
+          },
+          "comentario": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comentario"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "FeedbackCurationInput"
+      },
+      "FeedbackEventRecord": {
+        "properties": {
+          "identificador": {
+            "type": "string",
+            "title": "Identificador"
+          },
+          "numero_processo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Numero Processo"
+          },
+          "rascunho_id": {
+            "type": "string",
+            "title": "Rascunho Id"
+          },
+          "extracao_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Extracao Id"
+          },
+          "campo": {
+            "type": "string",
+            "title": "Campo"
+          },
+          "acao": {
+            "type": "string",
+            "enum": [
+              "confirmed",
+              "corrected",
+              "removed",
+              "added",
+              "not_found",
+              "ambiguous"
+            ],
+            "title": "Acao"
+          },
+          "motivo_codigo": {
+            "type": "string",
+            "enum": [
+              "confirmado_sem_alteracao",
+              "decisao_posterior_prevalece",
+              "documento_incorreto",
+              "pagina_incorreta",
+              "valor_interpretado_incorretamente",
+              "data_interpretada_incorretamente",
+              "regra_nao_se_aplica",
+              "campo_ausente_no_documento",
+              "contrato_incorreto",
+              "parcela_associada_ao_contrato_errado",
+              "classificacao_documento_incorreta",
+              "ambiguidade_documental",
+              "adicao_manual",
+              "nao_informado",
+              "outro"
+            ],
+            "title": "Motivo Codigo"
+          },
+          "comentario": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comentario"
+          },
+          "valor_modelo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valor Modelo"
+          },
+          "valor_humano": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valor Humano"
+          },
+          "documento": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Documento"
+          },
+          "pagina": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pagina"
+          },
+          "evidencia_modelo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidencia Modelo"
+          },
+          "tipo_documento": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tipo Documento"
+          },
+          "versao_prompts": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Versao Prompts"
+          },
+          "modelo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Modelo"
+          },
+          "pipeline_version": {
+            "type": "string",
+            "title": "Pipeline Version"
+          },
+          "revisor_pseudonimo": {
+            "type": "string",
+            "title": "Revisor Pseudonimo"
+          },
+          "criado_em": {
+            "type": "string",
+            "title": "Criado Em"
+          },
+          "status_curadoria": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "approved",
+              "rejected"
+            ],
+            "title": "Status Curadoria"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "identificador",
+          "rascunho_id",
+          "campo",
+          "acao",
+          "motivo_codigo",
+          "pipeline_version",
+          "revisor_pseudonimo",
+          "criado_em",
+          "status_curadoria"
+        ],
+        "title": "FeedbackEventRecord"
+      },
+      "FeedbackFieldMetric": {
+        "properties": {
+          "campo": {
+            "type": "string",
+            "title": "Campo"
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total"
+          },
+          "confirmados": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Confirmados"
+          },
+          "corrigidos": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Corrigidos"
+          },
+          "removidos": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Removidos"
+          },
+          "adicionados": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Adicionados"
+          },
+          "taxa_intervencao": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,6}0*$",
+            "title": "Taxa Intervencao"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "campo",
+          "total",
+          "confirmados",
+          "corrigidos",
+          "removidos",
+          "adicionados",
+          "taxa_intervencao"
+        ],
+        "title": "FeedbackFieldMetric"
+      },
+      "FeedbackPage": {
+        "properties": {
+          "itens": {
+            "items": {
+              "$ref": "#/components/schemas/FeedbackEventRecord"
+            },
+            "type": "array",
+            "title": "Itens"
+          },
+          "pagina": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Pagina"
+          },
+          "tamanho_pagina": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Tamanho Pagina"
+          },
+          "total_itens": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total Itens"
+          },
+          "total_paginas": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total Paginas"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "itens",
+          "pagina",
+          "tamanho_pagina",
+          "total_itens",
+          "total_paginas"
+        ],
+        "title": "FeedbackPage"
+      },
+      "FeedbackReasonMetric": {
+        "properties": {
+          "motivo_codigo": {
+            "type": "string",
+            "title": "Motivo Codigo"
+          },
+          "quantidade": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Quantidade"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "motivo_codigo",
+          "quantidade"
+        ],
+        "title": "FeedbackReasonMetric"
+      },
+      "FieldEvidence": {
+        "properties": {
+          "campo": {
+            "type": "string",
+            "title": "Campo"
+          },
+          "valor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valor"
+          },
+          "documento": {
+            "type": "string",
+            "title": "Documento"
+          },
+          "pagina": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Pagina"
+          },
+          "trecho": {
+            "type": "string",
+            "title": "Trecho"
+          },
+          "escopo": {
+            "type": "string",
+            "enum": [
+              "caso_concreto",
+              "jurisprudencia_citada",
+              "indeterminado"
+            ],
+            "title": "Escopo"
+          },
+          "natureza": {
+            "type": "string",
+            "enum": [
+              "pedido",
+              "fato",
+              "comando_decisorio",
+              "fundamentacao",
+              "classificacao_documental",
+              "indeterminado"
+            ],
+            "title": "Natureza",
+            "default": "indeterminado"
+          },
+          "efeito": {
+            "type": "string",
+            "enum": [
+              "informa",
+              "mantem",
+              "altera",
+              "afasta",
+              "majora",
+              "reduz",
+              "substitui",
+              "nao_se_aplica"
+            ],
+            "title": "Efeito",
+            "default": "informa"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "campo",
+          "valor",
+          "documento",
+          "pagina",
+          "trecho",
+          "escopo"
+        ],
+        "title": "FieldEvidence"
+      },
+      "FinOpsStageMetric": {
+        "properties": {
+          "etapa": {
+            "type": "string",
+            "title": "Etapa"
+          },
+          "chamadas_api": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Chamadas Api"
+          },
+          "falhas_api": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Falhas Api",
+            "default": 0
+          },
+          "acertos_cache": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Acertos Cache"
+          },
+          "caracteres_entrada": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Caracteres Entrada"
+          },
+          "caracteres_saida": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Caracteres Saida"
+          },
+          "tokens_reais": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tokens Reais"
+          },
+          "tokens_estimados": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Tokens Estimados"
+          },
+          "custo_estimado_usd": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,6}0*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Custo Estimado Usd"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "etapa",
+          "chamadas_api",
+          "acertos_cache",
+          "caracteres_entrada",
+          "caracteres_saida",
+          "tokens_estimados"
+        ],
+        "title": "FinOpsStageMetric"
+      },
+      "FinOpsSummary": {
+        "properties": {
+          "periodo_dias": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Periodo Dias"
+          },
+          "chamadas_api": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Chamadas Api"
+          },
+          "falhas_api": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Falhas Api",
+            "default": 0
+          },
+          "acertos_cache": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Acertos Cache"
+          },
+          "taxa_cache": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,6}0*$",
+            "title": "Taxa Cache"
+          },
+          "caracteres_entrada": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Caracteres Entrada"
+          },
+          "caracteres_saida": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Caracteres Saida"
+          },
+          "tokens_reais": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tokens Reais"
+          },
+          "tokens_estimados": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Tokens Estimados"
+          },
+          "custo_estimado_usd": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,6}0*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Custo Estimado Usd"
+          },
+          "origem_tokens": {
+            "type": "string",
+            "enum": [
+              "gateway",
+              "estimativa_local",
+              "mista",
+              "cache",
+              "indisponivel"
+            ],
+            "title": "Origem Tokens"
+          },
+          "economia_chamadas_cache": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Economia Chamadas Cache"
+          },
+          "orcamento_mensal_usd": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Orcamento Mensal Usd"
+          },
+          "consumo_mes_estimado_usd": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,6}0*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Consumo Mes Estimado Usd"
+          },
+          "percentual_orcamento": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,6}0*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Percentual Orcamento"
+          },
+          "status_orcamento": {
+            "type": "string",
+            "enum": [
+              "not_configured",
+              "unavailable",
+              "ok",
+              "warning",
+              "exceeded"
+            ],
+            "title": "Status Orcamento",
+            "default": "not_configured"
+          },
+          "por_etapa": {
+            "items": {
+              "$ref": "#/components/schemas/FinOpsStageMetric"
+            },
+            "type": "array",
+            "title": "Por Etapa"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "periodo_dias",
+          "chamadas_api",
+          "acertos_cache",
+          "taxa_cache",
+          "caracteres_entrada",
+          "caracteres_saida",
+          "tokens_estimados",
+          "origem_tokens",
+          "economia_chamadas_cache"
+        ],
+        "title": "FinOpsSummary"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "Health": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "ok"
+          },
+          "versao_api": {
+            "type": "string",
+            "title": "Versao Api",
+            "default": "2.0.0"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "Health",
+        "description": "Identifica disponibilidade da API e sua versão de contrato."
+      },
+      "IndexOption": {
+        "properties": {
+          "chave": {
+            "type": "string",
+            "title": "Chave"
+          },
+          "nome": {
+            "type": "string",
+            "title": "Nome"
+          },
+          "nome_base": {
+            "type": "string",
+            "title": "Nome Base"
+          },
+          "disponivel": {
+            "type": "boolean",
+            "title": "Disponivel",
+            "default": true
+          },
+          "modo": {
+            "type": "string",
+            "enum": [
+              "rate_decimal",
+              "value_index",
+              "sem_correcao",
+              "indisponivel"
+            ],
+            "title": "Modo"
+          },
+          "competencia_inicial": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Competencia Inicial"
+          },
+          "competencia_final": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Competencia Final"
+          },
+          "competencia_maxima_atualizacao": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Competencia Maxima Atualizacao"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "chave",
+          "nome",
+          "nome_base",
+          "modo"
+        ],
+        "title": "IndexOption"
+      },
+      "IndexStatus": {
+        "properties": {
+          "estado": {
+            "type": "string",
+            "enum": [
+              "nao_verificado",
+              "atualizado",
+              "sem_novidade",
+              "falha",
+              "executando"
+            ],
+            "title": "Estado"
+          },
+          "mensagem": {
+            "type": "string",
+            "title": "Mensagem"
+          },
+          "atualizado_em": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Atualizado Em"
+          },
+          "arquivos_sha256": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Arquivos Sha256"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "estado",
+          "mensagem",
+          "arquivos_sha256"
+        ],
+        "title": "IndexStatus"
+      },
+      "Installment-Input": {
+        "properties": {
+          "data": {
+            "type": "string",
+            "format": "date",
+            "title": "Data"
+          },
+          "valor_singelo": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,16}|(?=[\\d.]{1,19}0*$)\\d{0,16}\\.\\d{0,2}0*$)"
+              }
+            ],
+            "title": "Valor Singelo"
+          },
+          "descricao": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Descricao",
+            "default": ""
+          },
+          "verba_tipo": {
+            "type": "string",
+            "enum": [
+              "dano_material",
+              "dano_moral",
+              "honorarios",
+              "custas"
+            ],
+            "title": "Verba Tipo"
+          },
+          "multiplicador": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "enum": [
+                  1,
+                  2
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Multiplicador"
+          },
+          "origem": {
+            "type": "string",
+            "enum": [
+              "informada",
+              "honorarios_dano_moral"
+            ],
+            "title": "Origem",
+            "default": "informada"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data",
+          "valor_singelo",
+          "verba_tipo"
+        ],
+        "title": "Installment",
+        "description": "Parcela revisada e congelada dentro de uma versão."
+      },
+      "Installment-Output": {
+        "properties": {
+          "data": {
+            "type": "string",
+            "format": "date",
+            "title": "Data"
+          },
+          "valor_singelo": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,16}|(?=[\\d.]{1,19}0*$)\\d{0,16}\\.\\d{0,2}0*$)",
+            "title": "Valor Singelo"
+          },
+          "descricao": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Descricao",
+            "default": ""
+          },
+          "verba_tipo": {
+            "type": "string",
+            "enum": [
+              "dano_material",
+              "dano_moral",
+              "honorarios",
+              "custas"
+            ],
+            "title": "Verba Tipo"
+          },
+          "multiplicador": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "enum": [
+                  1,
+                  2
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Multiplicador"
+          },
+          "origem": {
+            "type": "string",
+            "enum": [
+              "informada",
+              "honorarios_dano_moral"
+            ],
+            "title": "Origem",
+            "default": "informada"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data",
+          "valor_singelo",
+          "verba_tipo"
+        ],
+        "title": "Installment",
+        "description": "Parcela revisada e congelada dentro de uma versão."
+      },
+      "InstallmentDiff": {
+        "properties": {
+          "posicao": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Posicao"
+          },
+          "acao": {
+            "type": "string",
+            "enum": [
+              "adicionada",
+              "removida",
+              "alterada"
+            ],
+            "title": "Acao"
+          },
+          "campos_alterados": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Campos Alterados"
+          },
+          "antes": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Installment-Output"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "depois": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Installment-Output"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "posicao",
+          "acao"
+        ],
+        "title": "InstallmentDiff"
+      },
+      "OperationalAdjustment": {
+        "properties": {
+          "campo": {
+            "type": "string",
+            "title": "Campo"
+          },
+          "valor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valor"
+          },
+          "motivo": {
+            "type": "string",
+            "title": "Motivo"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "campo",
+          "valor",
+          "motivo"
+        ],
+        "title": "OperationalAdjustment"
+      },
+      "ParameterCatalogItem": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "text",
+              "number",
+              "date",
+              "select",
+              "checkbox"
+            ],
+            "title": "Type"
+          },
+          "section": {
+            "type": "string",
+            "title": "Section"
+          },
+          "options": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ParameterOption"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Options"
+          },
+          "help": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Help"
+          },
+          "damageTypes": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "dano_material",
+                    "dano_moral",
+                    "honorarios",
+                    "custas"
+                  ]
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Damagetypes"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "key",
+          "label",
+          "type",
+          "section"
+        ],
+        "title": "ParameterCatalogItem"
+      },
+      "ParameterChangeInput": {
+        "properties": {
+          "origem_calculo": {
+            "type": "string",
+            "enum": [
+              "manual",
+              "processo"
+            ],
+            "title": "Origem Calculo"
+          },
+          "numero_processo": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[0-9][0-9.\\-]{0,39}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Numero Processo"
+          },
+          "rascunho_id": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 8,
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "title": "Rascunho Id"
+          },
+          "campo": {
+            "type": "string",
+            "title": "Campo"
+          },
+          "valor_anterior": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valor Anterior"
+          },
+          "valor_novo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valor Novo"
+          },
+          "extracao_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Extracao Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "origem_calculo",
+          "rascunho_id",
+          "campo"
+        ],
+        "title": "ParameterChangeInput"
+      },
+      "ParameterChangeRecord": {
+        "properties": {
+          "origem_calculo": {
+            "type": "string",
+            "enum": [
+              "manual",
+              "processo"
+            ],
+            "title": "Origem Calculo"
+          },
+          "numero_processo": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[0-9][0-9.\\-]{0,39}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Numero Processo"
+          },
+          "rascunho_id": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 8,
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "title": "Rascunho Id"
+          },
+          "campo": {
+            "type": "string",
+            "title": "Campo"
+          },
+          "valor_anterior": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valor Anterior"
+          },
+          "valor_novo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valor Novo"
+          },
+          "extracao_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Extracao Id"
+          },
+          "identificador": {
+            "type": "integer",
+            "title": "Identificador"
+          },
+          "registrado_em": {
+            "type": "string",
+            "title": "Registrado Em"
+          },
+          "ator_tecnico": {
+            "type": "string",
+            "title": "Ator Tecnico"
+          },
+          "valor_extraido": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valor Extraido"
+          },
+          "origem_extraida": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Origem Extraida"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "origem_calculo",
+          "rascunho_id",
+          "campo",
+          "identificador",
+          "registrado_em",
+          "ator_tecnico"
+        ],
+        "title": "ParameterChangeRecord"
+      },
+      "ParameterOption": {
+        "properties": {
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "hidden": {
+            "type": "boolean",
+            "title": "Hidden",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "value",
+          "label"
+        ],
+        "title": "ParameterOption"
+      },
+      "ProcessSummary": {
+        "properties": {
+          "numero_processo": {
+            "type": "string",
+            "title": "Numero Processo"
+          },
+          "quantidade_documentos": {
+            "type": "integer",
+            "title": "Quantidade Documentos"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "numero_processo",
+          "quantidade_documentos"
+        ],
+        "title": "ProcessSummary"
+      },
+      "QualitySummary": {
+        "properties": {
+          "total_eventos": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total Eventos"
+          },
+          "confirmados": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Confirmados"
+          },
+          "corrigidos": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Corrigidos"
+          },
+          "removidos": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Removidos"
+          },
+          "adicionados": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Adicionados"
+          },
+          "pendentes_curadoria": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Pendentes Curadoria"
+          },
+          "taxa_intervencao": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,6}0*$",
+            "title": "Taxa Intervencao"
+          },
+          "por_campo": {
+            "items": {
+              "$ref": "#/components/schemas/FeedbackFieldMetric"
+            },
+            "type": "array",
+            "title": "Por Campo"
+          },
+          "motivos": {
+            "items": {
+              "$ref": "#/components/schemas/FeedbackReasonMetric"
+            },
+            "type": "array",
+            "title": "Motivos"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "total_eventos",
+          "confirmados",
+          "corrigidos",
+          "removidos",
+          "adicionados",
+          "pendentes_curadoria",
+          "taxa_intervencao"
+        ],
+        "title": "QualitySummary"
+      },
+      "ReviewCaptureResult": {
+        "properties": {
+          "eventos_criados": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Eventos Criados"
+          },
+          "confirmados": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Confirmados"
+          },
+          "corrigidos": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Corrigidos"
+          },
+          "pendentes_curadoria": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Pendentes Curadoria"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "eventos_criados",
+          "confirmados",
+          "corrigidos",
+          "pendentes_curadoria"
+        ],
+        "title": "ReviewCaptureResult"
+      },
+      "ReviewSnapshotInput": {
+        "properties": {
+          "origem_calculo": {
+            "type": "string",
+            "enum": [
+              "manual",
+              "processo"
+            ],
+            "title": "Origem Calculo"
+          },
+          "numero_processo": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[0-9][0-9.\\-]{0,39}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Numero Processo"
+          },
+          "rascunho_id": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 8,
+            "title": "Rascunho Id"
+          },
+          "extracao_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Extracao Id"
+          },
+          "parametros": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Parametros"
+          },
+          "parametros_por_dano": {
+            "additionalProperties": {
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": "object"
+            },
+            "type": "object",
+            "title": "Parametros Por Dano"
+          },
+          "parcelas": {
+            "items": {
+              "$ref": "#/components/schemas/Installment-Input"
+            },
+            "type": "array",
+            "title": "Parcelas"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "origem_calculo",
+          "rascunho_id"
+        ],
+        "title": "ReviewSnapshotInput",
+        "description": "Snapshot do estado revisado usado para comparar IA × humano no servidor."
+      },
+      "SummaryEntry": {
+        "properties": {
+          "campo": {
+            "type": "string",
+            "title": "Campo"
+          },
+          "valor": {
+            "type": "string",
+            "title": "Valor"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "campo",
+          "valor"
+        ],
+        "title": "SummaryEntry"
+      },
+      "UploadResponse": {
+        "properties": {
+          "documentos": {
+            "items": {
+              "$ref": "#/components/schemas/DocumentMetadata"
+            },
+            "type": "array",
+            "title": "Documentos"
+          },
+          "extracoes": {
+            "items": {
+              "$ref": "#/components/schemas/ExtractionStatus"
+            },
+            "type": "array",
+            "title": "Extracoes"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "documentos",
+          "extracoes"
+        ],
+        "title": "UploadResponse"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "VersionedCalculationResponse": {
+        "properties": {
+          "origem_calculo": {
+            "type": "string",
+            "enum": [
+              "manual",
+              "processo"
+            ],
+            "title": "Origem Calculo"
+          },
+          "numero_processo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Numero Processo"
+          },
+          "identificador_calculo": {
+            "type": "string",
+            "title": "Identificador Calculo"
+          },
+          "memoria": {
+            "$ref": "#/components/schemas/DataTable"
+          },
+          "resumo": {
+            "items": {
+              "$ref": "#/components/schemas/SummaryEntry"
+            },
+            "type": "array",
+            "title": "Resumo"
+          },
+          "parametros": {
+            "$ref": "#/components/schemas/CalculationParameters-Output"
+          },
+          "parametros_por_dano": {
+            "$ref": "#/components/schemas/DamageParameters-Output"
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/CalculationMetadata"
+          },
+          "registro": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CalculationVersionRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "execucao": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CalculationExecutionRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "origem_calculo",
+          "numero_processo",
+          "identificador_calculo",
+          "memoria",
+          "resumo",
+          "parametros",
+          "parametros_por_dano",
+          "metadata"
+        ],
+        "title": "VersionedCalculationResponse"
+      }
+    }
+  }
+}

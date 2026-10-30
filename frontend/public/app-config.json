@@ -1,0 +1,6 @@
+{
+  "apiBaseUrl": "/api/v3",
+  "auditApiBaseUrl": "/services/auditoria/api/v2",
+  "chatbotApiBaseUrl": "/services/chatbot/api/v3",
+  "pollIntervalMs": 1500
+}

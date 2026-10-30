@@ -1,0 +1,1 @@
+Procedimento de curatela de pessoa adulta, associado à necessidade de nomeação/definição dos poderes de curador, pedido de curatela, interdição ou tomada de medidas de proteção da capacidade civil. Procure partes, pedido e providência principal, não palavras isoladas.

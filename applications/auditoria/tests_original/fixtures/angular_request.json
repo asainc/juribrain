@@ -1,0 +1,36 @@
+{
+  "origem_calculo": "processo",
+  "numero_processo": "1001",
+  "identificador_calculo": "1001",
+  "parcelas": [
+    {
+      "data": "2025-01-01",
+      "valor_singelo": "1234.56",
+      "descricao": "Parcela sintética",
+      "verba_tipo": "dano_material"
+    }
+  ],
+  "parametros": {
+    "indice": "sem_correcao",
+    "mes_atualizacao": "março",
+    "ano_atualizacao": 2026,
+    "juros_moratorios_tipo": "sem_juros"
+  },
+  "parametros_por_dano": {
+    "dano_material": {
+      "indice": "sem_correcao",
+      "mes_atualizacao": "março",
+      "ano_atualizacao": 2026,
+      "juros_moratorios_tipo": "sem_juros"
+    },
+    "dano_moral": {
+      "indice": "sem_correcao",
+      "mes_atualizacao": "março",
+      "ano_atualizacao": 2026,
+      "juros_moratorios_tipo": "sem_juros"
+    }
+  },
+  "revisao_humana_confirmada": true,
+  "honorarios_sobre_danos_morais": false,
+  "competencia_automatica": false
+}

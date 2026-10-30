@@ -1,0 +1,1 @@
+Consulta jurídica, pedido de análise/opinião ou parecer sobre tema que não se enquadre nas quatro naturezas específicas. Também se aplica a documentos gerais que apresentem pedido claro de parecer e objeto diverso, mas NÃO deve servir como categoria de incerteza. Quando insuficiente ou ambíguo, retorne INDETERMINADA.

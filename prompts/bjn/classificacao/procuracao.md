@@ -1,0 +1,1 @@
+Instrumento de mandato/procuração pelo qual outorgante confere poderes a procurador, inclusive poderes específicos ou gerais, com identificação de partes e poderes. Diferencie de procuração que aparece como anexo secundário de outra ação: classifique a finalidade principal do documento, não anexos instrumentais.

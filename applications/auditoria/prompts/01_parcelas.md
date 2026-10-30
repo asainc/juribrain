@@ -1,0 +1,55 @@
+# Extraindo parcelas e valores de condenação
+
+## Objetivo
+Identifique valores monetários que possam compor a memória de cálculo como `dano_material`, `dano_moral`, `honorarios` ou `custas`, preservando a decomposição original sempre que ela estiver disponível.
+
+## Onde procurar dano material
+Não limite a busca ao dispositivo. Datas e valores podem estar na petição inicial, extratos, comprovantes, tabelas, quadros e anexos, enquanto a sentença/acórdão apenas define quais prejuízos devem ser ressarcidos.
+
+Exemplos sintéticos que devem ser reconhecidos:
+- narrativa: `em 10/02/2025 ocorreram duas transferências, de R$ 1.250,00 e R$ 2.875,45` → duas parcelas, com a mesma data, se estiverem dentro do prejuízo reconhecido;
+- narrativa agregada: `um boleto de R$ 850,00 e dois PIX de R$ 1.100,00 cada` → três parcelas se cada lançamento estiver comprovado e a multiplicidade for inequívoca;
+- tabela `Data | Histórico | Valor` ou `Vencimento | Parcela | Valor` → uma parcela por linha válida;
+- tabela com total no rodapé → extraia as linhas individualizadas e não crie parcela adicional para o total;
+- valor global `dano material de R$ 7.500,00` → uma parcela somente se existir data de origem verificável. Sem data segura, gere alerta e não invente.
+
+## Pedido, prova e condenação
+- Um valor na petição inicial pode fornecer a composição factual das perdas, mas use `natureza=pedido` quando for mera pretensão e `natureza=fato` quando for transação/comprovante objetivo.
+- Quando decisão posterior acolhe genericamente as transações descritas na inicial, as linhas da inicial/anexos podem fornecer as parcelas e o comando posterior define o escopo jurídico.
+- Se comando decisório posterior fixa, reduz, majora, substitui ou afasta valor, classifique a evidência como `comando_decisorio` e marque o `efeito` correspondente.
+- Não mantenha simultaneamente quantia antiga e quantia decisória mais recente quando esta substitui expressamente aquela.
+- `valor da causa` não é parcela, salvo comando inequívoco que o adote como quantia devida.
+
+## Dano moral
+Diferencie valor pedido de valor efetivamente arbitrado. Prefira o comando decisório vigente para o montante. Se houver valor individual por beneficiário, crie parcelas distintas apenas quando a individualização estiver clara.
+
+## Multiplicador por parcela
+O campo `multiplicador` representa uma regra específica daquela parcela:
+- use `2` apenas quando houver evidência inequívoca de que aquela parcela/lançamento deve ser restituído em dobro;
+- use `1` apenas quando houver comando inequívoco de restituição simples para aquela parcela em contexto onde outras possam ter tratamento diferente;
+- deixe `null` quando não houver determinação específica daquela parcela. Nesse caso, a flag global `parametros.valor_dobrado_flag` poderá funcionar como atalho/fallback no motor.
+
+Nunca altere `valor_singelo` para aplicar a dobra. `valor_singelo` é sempre o valor nominal documental.
+Quando `multiplicador` for `1` ou `2`, crie também evidência para `parcelas.<índice>.multiplicador` com o trecho decisório que sustenta essa regra.
+
+## Não transformar em parcela
+Não inclua saldo de conta, limite, valor total de contrato, taxa percentual, depósito judicial, pagamento parcial, levantamento, estorno ou compensação como parcelas calculáveis, salvo quando o próprio título condenatório os definir como valor principal a restituir.
+
+## Contrato de saída
+Para cada item de `parcelas`:
+- `data`: `AAAA-MM-DD`;
+- `valor_singelo`: decimal textual sem símbolo monetário;
+- `descricao`: curta e sem dados pessoais desnecessários;
+- `numero_contrato`: número/identificador do contrato ao qual a parcela pertence, quando estiver explicitamente associado ao lançamento; use `null` quando não houver vínculo contratual verificável;
+- `verba_tipo`: `dano_material`, `dano_moral`, `honorarios` ou `custas`;
+- `multiplicador`: `1`, `2` ou `null` conforme as regras acima.
+
+Quando `numero_contrato` estiver disponível, preserve somente o identificador contratual necessário para distinguir as parcelas; o backend acrescentará `Contrato: <número>` à descrição exibida.
+
+Crie evidências para `parcelas.<índice>.data`, `.valor_singelo` e `.verba_tipo`, usando o mesmo índice da lista. Crie evidência de `.numero_contrato` quando houver contrato verificável e de `.multiplicador` quando o valor não for `null`.
+
+## Limites
+Não faça rateio, soma inferida ou percentual que não esteja materializado quando isso alterar a quantia da parcela. Se o documento trouxer regra não representável pelo contrato, extraia o fato verificável e gere alerta para revisão humana.
+
+## Cobertura adicional
+Procure também por expressões como prejuízo, débito, restituição, ressarcimento, condenação, indenização, dano emergente, cobrança indevida, lançamento, transferência, saque, PIX, TED, DOC, boleto, tarifa, compra, parcela, mensalidade e total parcial. Quando houver tabela, extraia cada linha economicamente autônoma com sua própria data e valor; totais, subtotais e saldos não viram nova parcela se apenas agregarem linhas já extraídas. Valores por extenso e valores numéricos conflitantes devem gerar alerta.

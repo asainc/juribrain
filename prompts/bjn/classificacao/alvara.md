@@ -1,0 +1,1 @@
+Pedido de alvará judicial/autorização específica, tipicamente para levantamento ou liberação de valores ou prática de ato determinado, sem instrução principal de inventário e partilha. Pode se relacionar a valores de pessoa falecida; diferencie pela finalidade predominante da peça. A simples presença de 'alvará' dentro de inventário não transforma todo o processo em alvará.

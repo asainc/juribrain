@@ -1,0 +1,170 @@
+"""Configuração validada; erros não são substituídos silenciosamente por padrões."""
+from __future__ import annotations
+
+import json
+import os
+from decimal import Decimal
+from pathlib import Path
+
+from pydantic import Field, SecretStr, ValidationError, field_validator, model_validator
+from starlette.config import Config
+from typing import Literal
+from applications.auditoria.backend.models import Contract, InterestType
+from applications.auditoria.backend.calculation_policy import defaults_for_origin
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+class OperationalSettings(Contract):
+    """Visão tipada dos padrões documentais definidos no catálogo central.
+
+    A classe existe para manter injeção explícita nos serviços, mas não é uma fonte
+    de configuração independente. Os valores vêm de ``calculation_policy.json``.
+    """
+    default_index: str = Field(default_factory=lambda: str(defaults_for_origin("processo")["indice"]), frozen=True)
+    default_moratory_type: InterestType = Field(default_factory=lambda: defaults_for_origin("processo")["juros_moratorios_tipo"], frozen=True)
+    default_art_523: Literal["nao_aplicar", "aplicar_multa", "aplicar_multa_honorarios"] = Field(default_factory=lambda: defaults_for_origin("processo")["art_523"], frozen=True)
+
+
+class Settings(Contract):
+    """Parâmetros operacionais centralizados; segredos vêm do ambiente."""
+    environment: str = "local"
+    operational: OperationalSettings = Field(default_factory=OperationalSettings)
+    data_dir: Path = ROOT / "data"
+    cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:4200", "http://127.0.0.1:4200"])
+    max_upload_bytes: int = Field(default=20 * 1024 * 1024, ge=1024, le=100 * 1024 * 1024)
+    max_upload_files: int = Field(default=20, ge=1, le=100)
+    extraction_workers: int = Field(default=2, ge=1, le=4)
+
+    # Integração corporativa: segredos são lidos somente do ambiente/.env local.
+    bradesco_environment: Literal["dev", "homol", "prod"] = "dev"
+    bradesco_identificador: SecretStr = SecretStr("")
+    bradesco_senha: SecretStr = SecretStr("")
+    bradesco_authorization_token: SecretStr = SecretStr("")
+    bradesco_ca_bundle: Path | None = None
+    bradesco_text_url: str = ""
+    bradesco_identity_url: str = ""
+    bradesco_timeout_seconds: int = Field(default=600, ge=10, le=1800)
+
+    # Geração de texto usada por TODOS os prompts do projeto.
+    bradesco_text_model: str = Field(default="", max_length=100)
+    bradesco_text_temperature: float = Field(default=1.0, ge=0, le=2)
+    bradesco_text_max_tokens: int = Field(default=16384, ge=1024, le=65536)
+    bradesco_prompt_max_chars: int = Field(default=55000, ge=10000, le=250000)
+    extraction_max_pages_per_task: int = Field(default=16, ge=2, le=100)
+    extraction_fallback_pages_per_document: int = Field(default=4, ge=1, le=20)
+    extraction_max_attempts: int = Field(default=3, ge=1, le=5)
+    extraction_retry_delay_seconds: int = Field(default=5, ge=1, le=300)
+    extraction_lease_seconds: int = Field(default=900, ge=60, le=3600)
+
+    # FinOps da IA: limites são aplicados sobre métricas observáveis. Custos só são
+    # calculados quando a organização informa tarifas verificadas por milhão de tokens.
+    ai_finops_cache_enabled: bool = True
+    ai_finops_cache_ttl_days: int = Field(default=30, ge=1, le=365)
+    ai_finops_max_calls_per_job: int = Field(default=60, ge=1, le=500)
+    ai_finops_max_input_chars_per_job: int = Field(default=1_500_000, ge=50_000, le=20_000_000)
+    ai_finops_input_usd_per_million_tokens: Decimal | None = Field(default=None, ge=0)
+    ai_finops_output_usd_per_million_tokens: Decimal | None = Field(default=None, ge=0)
+    ai_finops_cached_input_usd_per_million_tokens: Decimal | None = Field(default=None, ge=0)
+    ai_finops_monthly_budget_usd: Decimal | None = Field(default=None, ge=0)
+    ai_finops_budget_warning_ratio: Decimal = Field(default=Decimal("0.80"), ge=0, le=1)
+    ai_finops_enforce_monthly_budget: bool = False
+    learning_examples_enabled: bool = True
+    learning_max_examples_per_task: int = Field(default=3, ge=0, le=8)
+    learning_max_chars_per_task: int = Field(default=1800, ge=0, le=10000)
+
+    gateway_token: SecretStr = SecretStr("")
+    index_timeout_seconds: int = Field(default=30, ge=1, le=60)
+
+    @field_validator("cors_origins")
+    @classmethod
+    def validate_origins(cls, values: list[str]) -> list[str]:
+        """Uma origem explícita evita conceder acesso CORS a sites arbitrários."""
+        from urllib.parse import urlsplit
+        for value in values:
+            parsed = urlsplit(value)
+            if parsed.scheme not in {"http", "https"} or not parsed.netloc or "*" in value or parsed.path or parsed.query or parsed.fragment:
+                raise ValueError("CORS exige origens HTTP/HTTPS explícitas, sem caminho.")
+        return values
+
+    @model_validator(mode="after")
+    def require_gateway(self) -> Settings:
+        """Publicação depende do gateway autenticado; não há login paralelo na UI."""
+        if self.environment != "local" and len(self.gateway_token.get_secret_value()) < 32:
+            raise ValueError("Defina GATEWAY_TOKEN com ao menos 32 caracteres no backend e no gateway autenticado.")
+        return self
+
+
+def load_settings() -> Settings:
+    """Prioridade: ambiente > .env > JSON > padrões; segredos corporativos não são persistidos."""
+    env_path = Path(os.environ.get("AUDITORIA_ENV_FILE", ROOT / ".env"))
+    if "AUDITORIA_ENV_FILE" in os.environ and not env_path.is_file():
+        raise ValueError("AUDITORIA_ENV_FILE aponta para um arquivo inexistente.")
+    file_values = Config(env_path if env_path.is_file() else None, environ={}, encoding="utf-8-sig").file_values
+    variables = {**file_values, **os.environ}
+    path = Path(variables.get("AUDITORIA_CONFIG_PATH", ROOT / "config/app.settings.json"))
+    if "AUDITORIA_CONFIG_PATH" in variables and not path.is_file():
+        raise ValueError("AUDITORIA_CONFIG_PATH aponta para um arquivo inexistente.")
+    try:
+        data = json.loads(path.read_text(encoding="utf-8-sig")) if path.exists() else {}
+    except (OSError, ValueError):
+        raise ValueError("Não foi possível ler o JSON de configuração do backend.") from None
+    if not isinstance(data, dict):
+        raise ValueError("A configuração do backend deve ser um objeto JSON.")
+    mapping = {
+        "APP_ENV": "environment",
+        "APP_DATA_DIR": "data_dir",
+        "BRADESCO_AMBIENTE": "bradesco_environment",
+        "BRADESCO_TIMEOUT": "bradesco_timeout_seconds",
+        "BRADESCO_TEXT_URL": "bradesco_text_url",
+        "BRADESCO_IDENTITY_URL": "bradesco_identity_url",
+        "BRADESCO_IAGEN_AMBIENTE": "bradesco_environment",
+        "BRADESCO_IDENTIFICADOR": "bradesco_identificador",
+        "BRADESCO_SENHA": "bradesco_senha",
+        "BRADESCO_AUTHORIZATION_TOKEN": "bradesco_authorization_token",
+        "BRADESCO_CA_BUNDLE": "bradesco_ca_bundle",
+        "BRADESCO_TIMEOUT_SECONDS": "bradesco_timeout_seconds",
+        "BRADESCO_TEXT_MODEL": "bradesco_text_model",
+        "BRADESCO_TEXT_TEMPERATURE": "bradesco_text_temperature",
+        "BRADESCO_TEXT_MAX_TOKENS": "bradesco_text_max_tokens",
+        "BRADESCO_PROMPT_MAX_CHARS": "bradesco_prompt_max_chars",
+        "EXTRACTION_MAX_PAGES_PER_TASK": "extraction_max_pages_per_task",
+        "EXTRACTION_FALLBACK_PAGES_PER_DOCUMENT": "extraction_fallback_pages_per_document",
+        "EXTRACTION_MAX_ATTEMPTS": "extraction_max_attempts",
+        "EXTRACTION_RETRY_DELAY_SECONDS": "extraction_retry_delay_seconds",
+        "EXTRACTION_LEASE_SECONDS": "extraction_lease_seconds",
+        "AI_FINOPS_CACHE_ENABLED": "ai_finops_cache_enabled",
+        "AI_FINOPS_CACHE_TTL_DAYS": "ai_finops_cache_ttl_days",
+        "AI_FINOPS_MAX_CALLS_PER_JOB": "ai_finops_max_calls_per_job",
+        "AI_FINOPS_MAX_INPUT_CHARS_PER_JOB": "ai_finops_max_input_chars_per_job",
+        "AI_FINOPS_INPUT_USD_PER_MILLION_TOKENS": "ai_finops_input_usd_per_million_tokens",
+        "AI_FINOPS_OUTPUT_USD_PER_MILLION_TOKENS": "ai_finops_output_usd_per_million_tokens",
+        "AI_FINOPS_CACHED_INPUT_USD_PER_MILLION_TOKENS": "ai_finops_cached_input_usd_per_million_tokens",
+        "AI_FINOPS_MONTHLY_BUDGET_USD": "ai_finops_monthly_budget_usd",
+        "AI_FINOPS_BUDGET_WARNING_RATIO": "ai_finops_budget_warning_ratio",
+        "AI_FINOPS_ENFORCE_MONTHLY_BUDGET": "ai_finops_enforce_monthly_budget",
+        "LEARNING_EXAMPLES_ENABLED": "learning_examples_enabled",
+        "LEARNING_MAX_EXAMPLES_PER_TASK": "learning_max_examples_per_task",
+        "LEARNING_MAX_CHARS_PER_TASK": "learning_max_chars_per_task",
+        "GATEWAY_TOKEN": "gateway_token",
+    }
+    # O ambiente tem precedência mesmo quando usa o nome alternativo da chave.
+    for layer in (file_values, os.environ):
+        for variable, field in mapping.items():
+            if variable in layer:
+                value = layer[variable].strip()
+                nullable_fields = {
+                    "bradesco_ca_bundle",
+                    "ai_finops_input_usd_per_million_tokens",
+                    "ai_finops_output_usd_per_million_tokens",
+                    "ai_finops_cached_input_usd_per_million_tokens",
+                    "ai_finops_monthly_budget_usd",
+                }
+                data[field] = (value or None) if field in nullable_fields else value
+        if "CORS_ORIGINS" in layer:
+            data["cors_origins"] = [item.strip() for item in layer["CORS_ORIGINS"].split(",")]
+    try:
+        return Settings.model_validate(data)
+    except ValidationError as error:
+        fields = ", ".join(".".join(map(str, item["loc"])) or "configuração" for item in error.errors(include_input=False))
+        raise ValueError(f"Configuração inválida no backend. Revise: {fields}.") from None

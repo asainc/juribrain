@@ -1,0 +1,28 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+frontend/.test-build/
+data/
+.env
+*.egg-info/
+docs/source.bundle
+
+# Relatórios locais e aprovações corporativas
+frontend/reports/
+frontend/config/approved-packages.json
+
+# Persistência local de demandas e arquivos enviados; nunca versionar dados reais.
+.runtime/
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm
+
+# Ambientes e dados de cada subaplicação
+applications/*/.env
+applications/*/.runtime/
+applications/*/data/
+applications/*/config/approved-secrets.json

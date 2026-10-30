@@ -1,0 +1,39 @@
+/* A identidade da aplicação original é mantida na navegação e nos cartões. */
+.platform-branding{text-decoration:none;color:var(--ink)}
+.platform-branding>span:last-child{min-width:0}
+.sidebar-footnote{margin-top:auto;padding:14px 8px 4px;border-top:1px solid var(--line);color:var(--muted);font-size:.67rem;display:flex;align-items:center;gap:8px}
+.sidebar-footnote-dot{display:inline-block;width:6px;height:6px;background:var(--success);border-radius:50%}
+.top-home-link{border:1px solid var(--line);border-radius:6px;padding:7px 12px;color:var(--muted);background:#fff;text-decoration:none;white-space:nowrap;font-size:.75rem;font-weight:600}
+.top-home-link:hover{background:var(--accent-soft);border-color:#e9c8d0;color:var(--accent)}
+.ecosystem-home{min-height:calc(100dvh - 63px);background:var(--canvas);padding:0 clamp(18px,3.2vw,52px)}
+.ecosystem-container{max-width:1390px;margin:0 auto}
+.ecosystem-intro{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(320px,.8fr);align-items:center;gap:36px;min-height:382px;padding:48px 0 46px;border-bottom:1px solid var(--line)}
+.ecosystem-intro-copy{max-width:735px}.ecosystem-kicker{display:flex;gap:9px;align-items:center;color:var(--accent);font-size:.69rem;letter-spacing:.14em;margin-bottom:19px}.kicker-line{display:block;width:22px;height:2px;background:var(--accent)}
+.ecosystem-intro h1{font-size:clamp(2.05rem,3.3vw,3.35rem);line-height:1.13;letter-spacing:-.045em;color:var(--ink);font-weight:500;margin:0 0 18px}
+.ecosystem-intro h1 span{color:var(--accent)}
+.ecosystem-intro-copy>p{max-width:615px;font-size:.91rem;line-height:1.75;color:var(--muted)}
+.ecosystem-primary-action{display:inline-flex;align-items:center;gap:27px;margin-top:23px;padding:12px 18px;border-radius:6px;background:var(--accent);color:#fff;text-decoration:none;font-size:.79rem;font-weight:700;min-height:44px;box-shadow:0 5px 15px #bd214219}
+.ecosystem-primary-action:hover{background:var(--accent-hover)}.ecosystem-primary-action span{font-size:1.2rem}
+.ecosystem-hero-visual{position:relative;height:290px;min-width:0;display:grid;place-items:center;overflow:hidden}
+.hero-decoration{position:absolute;border-radius:50%;border:1px solid #e8cbd2}.hero-decoration--top{width:340px;height:340px;left:50%;top:50%;transform:translate(-50%,-50%)}.hero-decoration--bottom{width:230px;height:230px;left:50%;top:50%;transform:translate(-50%,-50%);background:#f9ecef}
+.hero-main-card{position:relative;z-index:2;width:222px;height:154px;display:flex;align-items:center;gap:14px;padding:19px;background:#fff;border:1px solid #e3d4d9;border-radius:11px;box-shadow:0 19px 52px #182b3b16}
+.hero-main-icon{width:40px;height:49px;border:2px solid var(--accent);border-radius:5px 5px 14px 5px;flex:0 0 auto;padding:10px 7px;display:flex;flex-direction:column;gap:6px}.hero-main-icon span{height:3px;border-radius:4px;background:var(--accent)}.hero-main-icon span:last-child{width:60%}
+.hero-main-copy{display:flex;flex-direction:column;gap:5px}.hero-main-copy>span{font-size:.56rem;color:var(--accent);font-weight:800;letter-spacing:.15em}.hero-main-copy strong{font-family:Georgia,serif;font-size:1.47rem;font-weight:500}.hero-main-copy small{font-size:.58rem}
+.hero-small-card{position:absolute;z-index:3;background:#fff;box-shadow:0 8px 25px #14253218;border:1px solid var(--line);border-radius:8px;padding:9px 11px;display:flex;gap:8px;align-items:center;font-size:.62rem;font-weight:650;color:#4d5f6c;white-space:nowrap}
+.hero-glyph{width:24px;height:24px;display:grid;place-items:center;border-radius:5px;background:var(--accent-soft);color:var(--accent);font-size:.59rem;font-weight:800}.hero-small-card--first{left:1%;top:16%}.hero-small-card--second{right:0;top:22%}.hero-small-card--third{right:6%;bottom:14%}
+.ecosystem-solutions{padding:34px 0 37px}.ecosystem-section-heading{display:flex;justify-content:space-between;gap:16px;align-items:end;margin-bottom:19px}.ecosystem-section-heading .eyebrow{color:var(--accent);font-size:.63rem;letter-spacing:.12em;margin-bottom:7px}.ecosystem-section-heading h2{font-family:Georgia,serif;font-size:1.7rem;font-weight:500;letter-spacing:-.025em}.ecosystem-section-heading p{font-size:.79rem;color:var(--muted);margin-top:6px}.ecosystem-section-count{color:#7d8a95;font-size:.7rem;border:1px solid var(--line);border-radius:100px;padding:6px 11px;background:#fff;white-space:nowrap}
+.ecosystem-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px}.ecosystem-app-card{border:1px solid var(--line);border-radius:9px;background:var(--paper);box-shadow:var(--shadow);padding:21px 22px 0;color:inherit;text-decoration:none;display:flex;flex-direction:column;min-height:273px;transition:box-shadow .18s,border-color .18s,transform .18s}.ecosystem-app-card:hover{border-color:#dbafbb;box-shadow:0 12px 30px #14253210;transform:translateY(-3px)}
+.ecosystem-card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px}.ecosystem-card-icon{width:45px;height:45px;display:grid;place-items:center;border-radius:8px;background:var(--accent-soft);color:var(--accent);font-weight:800;font-size:.8rem}.ecosystem-card-arrow{color:#8a9ba7;font-size:1.3rem}.ecosystem-card-category{color:var(--accent);font-size:.63rem;letter-spacing:.095em;font-weight:750}.ecosystem-app-card h3{font-family:Georgia,serif;font-size:1.38rem;font-weight:500;margin:7px 0 9px}.ecosystem-app-card p{color:var(--muted);font-size:.79rem;line-height:1.65;flex:1}.ecosystem-card-footer{display:flex;align-items:center;justify-content:space-between;border-top:1px solid #edf0f2;padding:15px 0;margin-top:17px;font-size:.76rem;font-weight:700;color:var(--accent)}.ecosystem-card-footer span{font-size:1.1rem}
+.ecosystem-footer{border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:10px;padding:17px 0 24px;color:#7d8994;font-size:.68rem}
+/* O editor da auditoria conserva o painel em colunas e dispõe do espaço disponível no shell comum. */
+.application-shell.module-audit{height:100dvh;min-height:0}.module-audit .application-content-shell{height:100dvh;min-height:0}.module-audit .route-content{overflow:hidden}.module-audit .route-content>app-calculation-page{display:flex;flex-direction:column;height:100%;min-height:0}
+.module-audit .route-content>app-batch-page,.module-audit .route-content>app-indices-page,.module-audit .route-content>app-quality-page,.module-audit .route-content>app-calculation-history-page{display:block;height:100%;overflow-y:auto}
+@media(max-width:1100px){.ecosystem-intro{grid-template-columns:1fr;gap:0;padding-top:40px}.ecosystem-hero-visual{display:none}.ecosystem-cards{gap:10px}.ecosystem-app-card{padding:17px 15px 0}.top-level-nav{gap:11px}}
+@media(max-width:900px){.ecosystem-home{padding:0 18px}.ecosystem-intro{min-height:0}.ecosystem-cards{grid-template-columns:1fr;max-width:670px}.ecosystem-app-card{min-height:240px}.sidebar-footnote{display:none}.module-audit .application-content-shell{min-height:calc(100dvh - 62px);height:auto}.module-audit .route-content{min-height:750px;overflow:auto}}
+@media(max-width:560px){.ecosystem-intro h1{font-size:2.2rem}.ecosystem-section-count{display:none}.ecosystem-footer{flex-direction:column}.top-home-link{font-size:.68rem;padding:6px 8px}}
+
+/* Contenção dos links do menu da auditoria em desktop e tablets. */
+.module-audit .top-level-nav--bjn{gap:clamp(6px,1vw,15px)}
+.module-audit .top-level-nav--bjn a{font-size:.71rem}
+@media(max-width:1300px){.module-audit .top-level-nav--bjn{max-width:49vw;overflow-x:auto;scrollbar-width:thin}}
+@media(max-width:900px){.module-audit .top-level-nav--bjn{max-width:76vw}.module-audit .application-bar-main{min-width:0}}
