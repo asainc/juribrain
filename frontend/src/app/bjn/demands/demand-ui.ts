@@ -3,10 +3,10 @@ import {DemandStatus} from '../../core/bjn-demand-api.service';
 export const demandStatusLabels:Record<DemandStatus,string> = {
   RECEBIDA:'Recebida', EM_TRIAGEM:'Em triagem', EM_ANALISE:'Em análise',
   AGUARDANDO_INFORMACOES:'Aguardando informações', CONCLUIDA:'Concluída', CANCELADA:'Cancelada', RESOLVIDA_IA:'Resolvida por autoatendimento',
-  TRIAGEM_ADMINISTRATIVA:'Triagem administrativa',ENCAMINHADA_AREA:'Encaminhada à área competente',PARECER_EM_REVISAO:'Parecer em revisão',
+  TRIAGEM_ADMINISTRATIVA:'Triagem administrativa',ENCAMINHADA_AREA:'Encaminhada à área competente',PARECER_EM_REVISAO:'Parecer em revisão',EXCLUIDA_ESCOPO:'Excluída — fora do escopo',
 };
 export const selectableStatuses:DemandStatus[] = [
-  'RECEBIDA','EM_TRIAGEM','EM_ANALISE','AGUARDANDO_INFORMACOES','CONCLUIDA','CANCELADA','RESOLVIDA_IA','TRIAGEM_ADMINISTRATIVA','ENCAMINHADA_AREA','PARECER_EM_REVISAO',
+  'RECEBIDA','EM_TRIAGEM','EM_ANALISE','AGUARDANDO_INFORMACOES','CONCLUIDA','CANCELADA','RESOLVIDA_IA','TRIAGEM_ADMINISTRATIVA','ENCAMINHADA_AREA','PARECER_EM_REVISAO','EXCLUIDA_ESCOPO',
 ];
 export function readableDate(value:string):string {
   if(!value) return '—';

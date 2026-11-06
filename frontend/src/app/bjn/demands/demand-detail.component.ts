@@ -53,6 +53,12 @@ import {demandStatusLabels,friendlyApiError,readableDate,readableSize,selectable
           <section class="surface demand-card bjn-final-opinion" aria-labelledby="final-opinion"><span class="eyebrow">RETORNO PUBLICADO</span><h2 id="final-opinion">Parecer jurídico disponível</h2>
             <p class="demand-muted">Publicado em {{date(demand.opinion!.published_at!)}} por {{demand.opinion!.reviewer_id}}.</p>
             <div class="bjn-opinion-text">{{demand.opinion!.final_text}}</div>
+            @if(opinionDocuments(demand.documents).length){
+              <div class="bjn-published-attachments"><h3>Anexos do parecer</h3><p>Documentos complementares publicados pelo advogado responsável.</p>
+                @for(doc of opinionDocuments(demand.documents);track doc.id){<button type="button" class="demand-outlined" (click)="preview(doc);documentsExpanded.set(true);documentTab.set('PARECER_COMPLEMENTAR')">{{doc.original_name}} · {{size(doc.file_size)}} — Visualizar na Central de documentos</button>}
+              </div>
+            }
+
             @if(demand.notification_dispatch;as dispatch){<p class="demand-muted" role="status">{{dispatch.status==='ENVIADO'?'Notificação enviada por e-mail.':dispatch.status==='SEM_EMAIL_CADASTRADO'?'Parecer publicado. Cadastro anterior sem e-mail de notificação; retorno disponível no portal.':'Parecer publicado. A notificação por e-mail permanece pendente de configuração ou reenvio.'}}</p>}
           </section>
         } @else {<section class="surface demand-card bjn-final-opinion"><h2>Parecer jurídico</h2><p class="demand-muted">Ainda não publicado. Você poderá consultá-lo aqui após validação e finalização pelo advogado responsável.</p></section>}
@@ -65,6 +71,15 @@ import {demandStatusLabels,friendlyApiError,readableDate,readableSize,selectable
             <button type="button" class="demand-outlined" (click)="generateDraft()" [disabled]="generatingOpinion() || !configuration()?.opinion_ai_available">{{generatingOpinion()?'Preparando rascunho...':'Preparar rascunho com text_generator'}}</button>
             @if(configuration() && !configuration()?.opinion_ai_available){<p class="demand-muted">{{configuration()?.ai_configuration?.message || 'IA indisponível.'}} O parecer ainda pode ser escrito manualmente.</p>}
             <div class="demand-field"><label for="opinion-text">Texto final do parecer <span class="required">*</span></label><textarea id="opinion-text" class="bjn-opinion-input" rows="12" maxlength="18000" [(ngModel)]="finalOpinion" placeholder="Revise a proposta de IA ou redija o parecer completo"></textarea></div>
+            <div class="bjn-opinion-attachments" aria-label="Documentos complementares ao parecer">
+              <div><strong>Documentos complementares</strong><p class="demand-muted">Anexe até 20 arquivos no total da demanda (PDF, PNG ou JPEG, até 15 MB por arquivo). Os anexos serão disponibilizados ao solicitante junto com o parecer publicado.</p></div>
+              <label for="opinion-attachments-upload" class="demand-outlined">Selecionar documentos
+                <input id="opinion-attachments-upload" type="file" class="demand-file-input" multiple accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg" (change)="selectOpinionAttachments($event)" />
+              </label>
+              @if(opinionFiles().length){<div class="bjn-opinion-attachment-list"><strong>{{opinionFiles().length}} arquivo(s) selecionado(s)</strong>
+                @for(file of opinionFiles();track $index){<div class="bjn-opinion-file"><span>{{file.name}} · {{size(file.size)}}</span><button type="button" [disabled]="publishingOpinion()" (click)="removeOpinionAttachment(file)">Remover</button></div>}
+              </div>}
+            </div>
             <label class="bjn-confirm"><input type="checkbox" [(ngModel)]="humanReviewed"/> Li e revisei integralmente o parecer; assumo sua publicação como advogado responsável.</label>
             @if(opinionError()){<p class="demand-error" role="alert">{{opinionError()}}</p>}
             @if(finalOpinion.trim().length<40){<p class="demand-muted" role="status">Informe ao menos 40 caracteres no parecer para habilitar a publicação.</p>}
@@ -130,11 +145,12 @@ import {demandStatusLabels,friendlyApiError,readableDate,readableSize,selectable
             <button type="button" [class.active]="documentTab()==='ALL'" (click)="changeDocumentTab('ALL')">Todos</button>
             <button type="button" [class.active]="documentTab()==='ANEXO'" (click)="changeDocumentTab('ANEXO')">Anexos</button>
             <button type="button" [class.active]="documentTab()==='DOCUMENTO_ENVIADO'" (click)="changeDocumentTab('DOCUMENTO_ENVIADO')">Enviados</button>
+            <button type="button" [class.active]="documentTab()==='PARECER_COMPLEMENTAR'" (click)="changeDocumentTab('PARECER_COMPLEMENTAR')">Parecer</button>
           </div>
           @if(visibleDocuments().length){<div class="demand-document-list" aria-label="Documentos disponíveis">
             @for(doc of visibleDocuments();track doc.id){<button type="button" [class.active]="selected()?.id===doc.id" (click)="preview(doc)">
               <span class="demand-file-square">{{doc.media_type==='application/pdf'?'PDF':'IMG'}}</span>
-              <span class="demand-document-name"><strong>{{doc.original_name}}</strong><small>{{size(doc.file_size)}} · {{doc.category==='ANEXO'?'Anexo':'Documento enviado'}}</small></span>
+              <span class="demand-document-name"><strong>{{doc.original_name}}</strong><small>{{size(doc.file_size)}} · {{doc.category==='ANEXO'?'Anexo':doc.category==='PARECER_COMPLEMENTAR'?'Anexo do parecer':'Documento enviado'}}</small></span>
               <span class="demand-document-chevron">›</span></button>}
           </div>} @else{<p class="demand-muted">Nenhum documento nesta categoria.</p>}
           <div class="demand-viewer" aria-label="Visualização do documento selecionado">
@@ -173,6 +189,20 @@ import {demandStatusLabels,friendlyApiError,readableDate,readableSize,selectable
             <button type="button" [disabled]="sending() || !selectedLawyer" (click)="assign()">Atribuir responsável</button>
             @if(!configuration()?.allowed_lawyers?.length){<small>Configure BJN_ALLOWED_LAWYERS no backend para habilitar distribuição.</small>}
           }
+          @if(demand.can_exclude_scope){
+            <div class="bjn-scope-exclusion">
+              <strong>Demanda fora do escopo?</strong><p>Antes de distribuir, você pode retirar a demanda do fluxo, informando a justificativa. O protocolo e o histórico serão preservados para auditoria.</p>
+              @if(!showExcludeScope()){
+                <button type="button" class="bjn-exclusion-trigger" (click)="showExcludeScope.set(true)">Excluir demanda por fora do escopo</button>
+              } @else {
+                <label for="scope-exclusion-reason">Justificativa obrigatória (10–300 caracteres)</label>
+                <textarea id="scope-exclusion-reason" class="demand-management-note" rows="3" maxlength="300" [(ngModel)]="scopeExclusionReason" placeholder="Explique por que a demanda não pertence ao escopo deste atendimento"></textarea>
+                <div class="bjn-exclusion-actions"><button type="button" (click)="showExcludeScope.set(false);scopeExclusionReason=''" [disabled]="sending()">Voltar</button>
+                  <button type="button" class="bjn-exclusion-confirm" [disabled]="sending()||scopeExclusionReason.trim().length<10" (click)="excludeScope()">{{sending()?'Registrando…':'Confirmar exclusão do fluxo'}}</button>
+                </div>
+              }
+            </div>
+          }
           @if(demand.can_manage){<label for="new-status">Atualizar status</label><select id="new-status" [(ngModel)]="newStatus"><option value="">Selecione o novo status</option>
             @for(s of availableTransitions(demand.status);track s){<option [value]="s">{{labels[s]}}</option>}
           </select><label for="status-note">Observação (opcional)</label><textarea id="status-note" class="demand-management-note" [(ngModel)]="statusNote" maxlength="300" rows="2" placeholder="Descreva brevemente a atualização"></textarea><button type="button" [disabled]="sending() || !newStatus" (click)="updateStatus()">Atualizar andamento</button>}
@@ -189,10 +219,13 @@ export class BjnDemandDetailComponent implements OnInit,OnDestroy {
   readonly configuration=signal<DemandConfiguration|null>(null);
   readonly busy=signal(true);readonly sending=signal(false);readonly error=signal('');
   readonly viewing=signal(false);readonly viewError=signal('');
-  readonly documentTab=signal<'ALL'|'ANEXO'|'DOCUMENTO_ENVIADO'>('ALL');
+  readonly documentTab=signal<'ALL'|'ANEXO'|'DOCUMENTO_ENVIADO'|'PARECER_COMPLEMENTAR'>('ALL');
   readonly selected=signal<DemandDocument|null>(null);
   readonly previewUrl=signal('');readonly trustedPreviewUrl=signal<SafeResourceUrl|null>(null);
   readonly pendingFiles=signal<File[]>([]);
+  readonly opinionFiles=signal<File[]>([]);
+  readonly showExcludeScope=signal(false);
+  scopeExclusionReason='';
   readonly documentsExpanded=signal(true);
   readonly analyzing=signal(false);
   readonly aiError=signal('');
@@ -202,7 +235,7 @@ export class BjnDemandDetailComponent implements OnInit,OnDestroy {
   readonly generatingOpinion=signal(false);readonly publishingOpinion=signal(false);readonly opinionError=signal('');
   finalOpinion='';humanReviewed=false;competenceChoice='';destinationArea='';
   currentStage(status:DemandStatus):number {
-    if(status==='CONCLUIDA'||status==='RESOLVIDA_IA'||status==='ENCAMINHADA_AREA')return 4;
+    if(status==='CONCLUIDA'||status==='RESOLVIDA_IA'||status==='ENCAMINHADA_AREA'||status==='EXCLUIDA_ESCOPO')return 4;
     if(status==='PARECER_EM_REVISAO'||status==='EM_ANALISE'||status==='AGUARDANDO_INFORMACOES')return 3;
     if(status==='RECEBIDA'||status==='EM_TRIAGEM'||status==='TRIAGEM_ADMINISTRATIVA')return 2;
     return 1;
@@ -227,7 +260,7 @@ export class BjnDemandDetailComponent implements OnInit,OnDestroy {
     // Descartar documentos e rascunhos anteriores impede vazamento entre perfis.
     this.previewGeneration++;this.cleanupPreview();this.selected.set(null);
     this.record.set(null);this.configuration.set(null);this.finalOpinion='';this.humanReviewed=false;
-    this.opinionError.set('');this.error.set('');
+    this.opinionError.set('');this.error.set('');this.opinionFiles.set([]);this.showExcludeScope.set(false);this.scopeExclusionReason='';
   }
   ngOnInit():void {void this.load();}
   ngOnDestroy():void {this.disposed=true;this.previewGeneration++;this.cleanupPreview();}
@@ -255,7 +288,7 @@ export class BjnDemandDetailComponent implements OnInit,OnDestroy {
     }
   }
   visibleDocuments():DemandDocument[]{return this.record()?.documents.filter(doc=>this.documentTab()==='ALL' || doc.category===this.documentTab()) || [];}
-  changeDocumentTab(tab:'ALL'|'ANEXO'|'DOCUMENTO_ENVIADO'):void {
+  changeDocumentTab(tab:'ALL'|'ANEXO'|'DOCUMENTO_ENVIADO'|'PARECER_COMPLEMENTAR'):void {
     // Mantém prévia coerente com o filtro selecionado, sem exibir arquivo de outra categoria.
     this.documentTab.set(tab);
     const first=this.visibleDocuments()[0];
@@ -327,13 +360,41 @@ export class BjnDemandDetailComponent implements OnInit,OnDestroy {
   }
   async generateDraft():Promise<void>{
     if(this.generatingOpinion())return;this.generatingOpinion.set(true);this.opinionError.set('');
-    try{const updated=await firstValueFrom(this.api.generateOpinionDraft(this.demandId));this.record.set(updated);this.finalOpinion=updated.opinion?.draft_text||'';this.humanReviewed=false;}
+    try{const updated=await firstValueFrom(this.api.generateOpinionDraft(this.demandId));this.record.set(updated);this.finalOpinion=updated.opinion?.draft_text||'';this.humanReviewed=false;this.opinionFiles.set([]);}
     catch(cause){this.opinionError.set(friendlyApiError(cause));}finally{this.generatingOpinion.set(false);}
+  }
+  opinionDocuments(documents:DemandDocument[]):DemandDocument[]{
+    return documents.filter(doc=>doc.category==='PARECER_COMPLEMENTAR');
+  }
+  /** Valida limites no navegador; o servidor sempre repete a checagem. */
+  selectOpinionAttachments(event:Event):void{
+    const input=event.target as HTMLInputElement;
+    const selected=Array.from(input.files||[]);input.value='';
+    if(selected.some(file=>file.size>15*1024*1024 || !['application/pdf','image/png','image/jpeg'].includes(file.type)
+      || !/\.(pdf|png|jpe?g)$/i.test(file.name))){
+      this.opinionError.set('Selecione somente arquivos PDF, PNG ou JPEG de até 15 MB.');return;
+    }
+    const unique=[...this.opinionFiles()];
+    for(const file of selected){if(!unique.some(old=>old.name===file.name&&old.size===file.size&&old.lastModified===file.lastModified))unique.push(file);}
+    if(unique.length+(this.record()?.documents.length||0)>20){this.opinionError.set('Limite total de 20 documentos por demanda.');return;}
+    this.opinionFiles.set(unique);this.opinionError.set('');
+  }
+  removeOpinionAttachment(file:File):void{
+    this.opinionFiles.update(files=>files.filter(item=>item!==file));
+  }
+  async excludeScope():Promise<void>{
+    if(this.sending()||!this.record()?.can_exclude_scope||this.scopeExclusionReason.trim().length<10)return;
+    this.sending.set(true);this.error.set('');
+    try{
+      this.record.set(await firstValueFrom(this.api.excludeScope(this.demandId,this.scopeExclusionReason.trim())));
+      this.showExcludeScope.set(false);this.scopeExclusionReason='';
+    }catch(cause){this.error.set(friendlyApiError(cause));}
+    finally{this.sending.set(false);}
   }
   async publishOpinion():Promise<void>{
     if(this.publishingOpinion()||!this.humanReviewed||this.finalOpinion.trim().length<40)return;
     this.publishingOpinion.set(true);this.opinionError.set('');
-    try{this.record.set(await firstValueFrom(this.api.publishOpinion(this.demandId,this.finalOpinion,true)));this.humanReviewed=false;}
+    try{this.record.set(await firstValueFrom(this.api.publishOpinionWithAttachments(this.demandId,this.finalOpinion,true,this.opinionFiles())));this.humanReviewed=false;this.opinionFiles.set([]);}
     catch(cause){this.opinionError.set(friendlyApiError(cause));}finally{this.publishingOpinion.set(false);}
   }
   async assign():Promise<void>{if(!this.selectedLawyer||this.sending())return;this.sending.set(true);this.error.set('');
@@ -345,7 +406,7 @@ export class BjnDemandDetailComponent implements OnInit,OnDestroy {
       RECEBIDA:['EM_TRIAGEM','CANCELADA'],EM_TRIAGEM:['EM_ANALISE','AGUARDANDO_INFORMACOES','CANCELADA'],
       TRIAGEM_ADMINISTRATIVA:['CANCELADA'],ENCAMINHADA_AREA:[],PARECER_EM_REVISAO:['AGUARDANDO_INFORMACOES','CANCELADA'],
       EM_ANALISE:['AGUARDANDO_INFORMACOES','CONCLUIDA','CANCELADA'],
-      AGUARDANDO_INFORMACOES:['EM_ANALISE','CANCELADA'],CONCLUIDA:[],CANCELADA:[],RESOLVIDA_IA:[],
+      AGUARDANDO_INFORMACOES:['EM_ANALISE','CANCELADA'],CONCLUIDA:[],CANCELADA:[],RESOLVIDA_IA:[],EXCLUIDA_ESCOPO:[],
     };return map[status];
   }
   async updateStatus():Promise<void>{if(!this.newStatus||this.sending())return;this.sending.set(true);this.error.set('');

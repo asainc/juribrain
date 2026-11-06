@@ -59,6 +59,11 @@ import {demandStatusLabels,friendlyApiError,readableDate,selectableStatuses} fro
             @for(value of statuses;track value){<option [value]="value">{{labels[value]}}</option>}
           </select>
         </label>
+        <label class="demand-search-input-group demand-search-nature" for="filter-nature"><span>Assunto / natureza</span>
+          <select id="filter-nature" [(ngModel)]="nature" name="nature"><option value="">Todas as naturezas</option>
+            @for(value of configuration()?.available_natures||[];track value){<option [value]="value">{{value}}</option>}
+          </select>
+        </label>
         <button type="submit" class="primary demand-search-submit" [disabled]="busy()">{{busy()?'Buscando…':'Buscar'}}</button>
         <button type="button" class="demand-filter-trigger" [attr.aria-expanded]="advancedFilters()" aria-controls="demand-advanced-filters" (click)="advancedFilters.set(!advancedFilters())">
           Filtros avançados @if(activeFilterCount()){<span class="demand-filter-counter">{{activeFilterCount()}}</span>}
@@ -100,6 +105,18 @@ import {demandStatusLabels,friendlyApiError,readableDate,selectableStatuses} fro
           {{assigning()?'Distribuindo…':'Distribuir '+selectedIds().length+' demanda(s)'}}
         </button>
       </div>
+      @if(scopeExclusionId()){
+        <div class="bjn-scope-exclusion bjn-list-exclusion" role="region" aria-label="Confirmar exclusão por fora do escopo">
+          <strong>Excluir do fluxo: {{scopeExclusionName()}}</strong>
+          <p>A demanda ficará identificada como “Excluída — fora do escopo” em “Todas as demandas”, inclusive ao selecionar “Todos os status”, mas não será exibida em “Pendentes”. A justificativa, o protocolo e os documentos serão preservados para auditoria.</p>
+          <label for="list-scope-reason">Justificativa obrigatória (10–300 caracteres)</label>
+          <textarea id="list-scope-reason" [(ngModel)]="scopeExclusionReason" maxlength="300" rows="3" placeholder="Por que esta demanda está fora do escopo?"></textarea>
+          <div class="bjn-exclusion-actions">
+            <button type="button" (click)="cancelExclusion()" [disabled]="excluding()">Cancelar</button>
+            <button type="button" class="bjn-exclusion-confirm" [disabled]="excluding()||scopeExclusionReason.trim().length<10" (click)="confirmExclusion()">{{excluding()?'Registrando…':'Confirmar exclusão'}}</button>
+          </div>
+        </div>
+      }
       @if(bulkSuccess()){<p class="bjn-bulk-feedback" role="status">{{bulkSuccess()}}</p>}
     }
     <div class="demand-table-heading">
@@ -115,16 +132,20 @@ import {demandStatusLabels,friendlyApiError,readableDate,selectableStatuses} fro
       @if(configuration()?.actor?.role==='admin' && tab()==='all'){
         <th scope="col" class="bjn-select-cell"><label class="sr-only" for="select-all-bjn">Selecionar todas as elegíveis</label>
         <input id="select-all-bjn" type="checkbox" [checked]="allEligibleSelected()" (change)="toggleAll($any($event.target).checked)" /></th>}
-      <th scope="col">Demanda</th><th scope="col">Área</th><th scope="col">Status</th><th scope="col">Responsável</th><th scope="col">Cadastro</th><th scope="col">Atualização</th><th scope="col"><span class="sr-only">Ações</span></th></tr></thead>
+      <th scope="col">Demanda</th><th scope="col">Área</th><th scope="col">Assunto / natureza</th><th scope="col">Status</th><th scope="col">Responsável</th><th scope="col">Cadastro</th><th scope="col">Atualização</th><th scope="col"><span class="sr-only">Ações</span></th></tr></thead>
       <tbody>@for(item of items();track item.id){<tr>
         @if(configuration()?.actor?.role==='admin' && tab()==='all'){
           <td class="bjn-select-cell"><input type="checkbox" [disabled]="!eligible(item)" [checked]="selectedIds().includes(item.id)" [attr.aria-label]="'Selecionar '+item.id" (change)="toggle(item.id,$any($event.target).checked)" /></td>
         }
         <td class="demand-title-cell"><a class="demand-strong-link" [routerLink]="['/bjn/demandas',item.id]">{{item.title}}</a><small>Protocolo {{item.id}}</small></td>
-        <td>{{item.consult_area}}</td><td><span class="demand-pill" [attr.data-status]="item.status">{{labels[item.status]}}</span></td>
+        <td>{{item.consult_area}}</td><td>{{item.service_nature}}</td><td><span class="demand-pill" [attr.data-status]="item.status">{{labels[item.status]}}</span></td>
         <td><span class="demand-lawyer"><span class="demand-avatar" aria-hidden="true">{{initials(item.lawyer_name||item.lawyer_email||'—')}}</span><span>{{item.lawyer_name || item.lawyer_email || 'Aguardando distribuição'}}</span></span></td>
         <td class="demand-date-cell">{{date(item.created_at)}}</td><td class="demand-date-cell">{{date(item.updated_at)}}</td>
-        <td><a class="demand-table-link" [routerLink]="['/bjn/demandas',item.id]" [attr.aria-label]="'Acompanhar '+item.id">Abrir <span aria-hidden="true">↗</span></a></td></tr>}
+        <td><div class="bjn-row-actions"><a class="demand-table-link" [routerLink]="['/bjn/demandas',item.id]" [attr.aria-label]="'Acompanhar '+item.id">Abrir <span aria-hidden="true">↗</span></a>
+          @if(configuration()?.actor?.role==='admin' && tab()==='all' && canExclude(item)){
+            <button type="button" class="bjn-row-exclude" (click)="startExclusion(item)" [attr.aria-label]="'Excluir demanda fora do escopo: '+item.id">Excluir</button>
+          }
+        </div></td></tr>}
       </tbody></table></div>}
     <footer class="demand-table-footer"><span>Os indicadores refletem somente os registros retornados pelos filtros atuais.</span><span>Atualize a consulta para ver alterações recentes.</span></footer>
   </section>
@@ -140,12 +161,16 @@ export class BjnDemandListComponent implements OnInit {
   readonly error=signal('');
   readonly bulkSuccess=signal('');
   readonly selectedIds=signal<string[]>([]);
+  readonly scopeExclusionId=signal('');
+  readonly scopeExclusionName=signal('');
+  readonly excluding=signal(false);
+  scopeExclusionReason='';
   readonly tab=signal<'all'|'pending'>('all');
   readonly advancedFilters=signal(false);
   readonly statuses=selectableStatuses;
   readonly labels=demandStatusLabels;
   readonly date=readableDate;
-  search='';status='';fromDate='';toDate='';branch='';registeredEmail='';clientCPF='';lawyer='';assignedLawyer='';
+  search='';status='';nature='';fromDate='';toDate='';branch='';registeredEmail='';clientCPF='';lawyer='';assignedLawyer='';
 
   ngOnInit():void{void this.initialize();}
   private async initialize():Promise<void>{
@@ -154,15 +179,36 @@ export class BjnDemandListComponent implements OnInit {
     await this.load();
   }
   switchTab(value:'all'|'pending'):void {
-    this.tab.set(value);this.selectedIds.set([]);this.bulkSuccess.set('');
-    if(value==='pending' && ['CONCLUIDA','CANCELADA','RESOLVIDA_IA','ENCAMINHADA_AREA'].includes(this.status)) this.status='';
+    this.tab.set(value);this.selectedIds.set([]);this.bulkSuccess.set('');this.cancelExclusion();
+    if(value==='pending' && ['CONCLUIDA','CANCELADA','RESOLVIDA_IA','ENCAMINHADA_AREA','EXCLUIDA_ESCOPO'].includes(this.status)) this.status='';
     void this.load();
   }
-  eligible(item:DemandSummary):boolean {return !['CONCLUIDA','CANCELADA','RESOLVIDA_IA','ENCAMINHADA_AREA','TRIAGEM_ADMINISTRATIVA'].includes(item.status);}
-  pendingCount():number {return this.items().filter(item=>!['CONCLUIDA','CANCELADA','RESOLVIDA_IA','ENCAMINHADA_AREA'].includes(item.status)).length;}
-  unassignedCount():number {return this.items().filter(item=>!item.lawyer_email && !item.lawyer_name).length;}
+  /** Só mostra a exclusão em protocolos ainda sem distribuição. */
+  canExclude(item:DemandSummary):boolean {
+    return !item.lawyer_email && ['RECEBIDA','EM_TRIAGEM','TRIAGEM_ADMINISTRATIVA'].includes(item.status);
+  }
+  startExclusion(item:DemandSummary):void {
+    if(this.configuration()?.actor?.role!=='admin'||!this.canExclude(item))return;
+    this.scopeExclusionId.set(item.id);this.scopeExclusionName.set(item.title);
+    this.scopeExclusionReason='';this.error.set('');this.bulkSuccess.set('');
+  }
+  cancelExclusion():void {this.scopeExclusionId.set('');this.scopeExclusionName.set('');this.scopeExclusionReason='';}
+  async confirmExclusion():Promise<void>{
+    if(this.configuration()?.actor?.role!=='admin'||this.excluding()||!this.scopeExclusionId()||this.scopeExclusionReason.trim().length<10)return;
+    this.excluding.set(true);this.error.set('');this.bulkSuccess.set('');
+    const excludedId=this.scopeExclusionId();
+    try{
+      await firstValueFrom(this.api.excludeScope(excludedId,this.scopeExclusionReason.trim()));
+      this.cancelExclusion();await this.load();
+      this.bulkSuccess.set(`Demanda ${excludedId} excluída do fluxo. Justificativa preservada no histórico.`);
+    }catch(cause){this.error.set(friendlyApiError(cause));}
+    finally{this.excluding.set(false);}
+  }
+  eligible(item:DemandSummary):boolean {return !['CONCLUIDA','CANCELADA','RESOLVIDA_IA','ENCAMINHADA_AREA','EXCLUIDA_ESCOPO','TRIAGEM_ADMINISTRATIVA'].includes(item.status);}
+  pendingCount():number {return this.items().filter(item=>!['CONCLUIDA','CANCELADA','RESOLVIDA_IA','ENCAMINHADA_AREA','EXCLUIDA_ESCOPO'].includes(item.status)).length;}
+  unassignedCount():number {return this.items().filter(item=>item.status!=='EXCLUIDA_ESCOPO' && !item.lawyer_email && !item.lawyer_name).length;}
   inAnalysisCount():number {return this.items().filter(item=>item.status==='EM_ANALISE').length;}
-  activeFilterCount():number {return [this.fromDate,this.toDate,this.lawyer,this.branch,this.registeredEmail,this.clientCPF].filter(item=>item.trim()).length;}
+  activeFilterCount():number {return [this.nature,this.fromDate,this.toDate,this.lawyer,this.branch,this.registeredEmail,this.clientCPF].filter(item=>item.trim()).length;}
   initials(name:string):string {return name==='—'?'?':name.trim().split(/\s+/).slice(0,2).map(part=>part[0]?.toUpperCase()||'').join('');}
   allEligibleSelected():boolean {
     const eligible=this.items().filter(item=>this.eligible(item)).slice(0,this.maxBulkSelection);
@@ -181,7 +227,7 @@ export class BjnDemandListComponent implements OnInit {
     this.selectedIds.set(checked?this.items().filter(item=>this.eligible(item)).slice(0,this.maxBulkSelection).map(item=>item.id):[]);
   }
   onSearchSubmit(event:Event):void {event.preventDefault();void this.load();}
-  clearFilters():void {this.search='';this.status='';this.fromDate='';this.toDate='';this.branch='';this.registeredEmail='';this.clientCPF='';this.lawyer='';void this.load();}
+  clearFilters():void {this.search='';this.status='';this.nature='';this.fromDate='';this.toDate='';this.branch='';this.registeredEmail='';this.clientCPF='';this.lawyer='';void this.load();}
   async assignSelected():Promise<void>{
     if(!this.configuration() || this.configuration()!.actor.role!=='admin' || !this.assignedLawyer||!this.selectedIds().length||this.assigning())return;
     this.assigning.set(true);this.error.set('');this.bulkSuccess.set('');
@@ -199,7 +245,7 @@ export class BjnDemandListComponent implements OnInit {
     try{
       const result=await firstValueFrom(this.api.list(this.search,this.status,{
         from_date:this.fromDate,to_date:this.toDate,branch:this.branch,registered_email:this.registeredEmail,
-        lawyer:this.lawyer,client_cpf:this.clientCPF,pending_only:this.tab()==='pending'
+        lawyer:this.lawyer,client_cpf:this.clientCPF,nature:this.nature,pending_only:this.tab()==='pending'
       }));
       this.items.set(result.items);
       this.loaded.set(true);

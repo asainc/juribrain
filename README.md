@@ -36,6 +36,14 @@ O comando `setup` instala as dependências de desenvolvimento, incluindo `@angul
 Se a instalação continuar falhando, consulte o log local do npm e execute `npm config get registry`, `node --version` e `npm --version`. Confirme que a URL do registry é aprovada e acessível; não divulgue tokens. Uma atualização do npm pode contornar o defeito, mas só deve ocorrer com autorização de infraestrutura e de acordo com as versões homologadas. Nunca execute `npm start` após uma instalação que terminou com erro.
 
 
+## Gestão de demandas BJN — melhorias de novembro de 2026
+
+- O filtro **Assunto / natureza** combina-se com status, datas e advogado na lista de demandas.
+- O gestor pode **excluir do fluxo** demandas **ainda não distribuídas** quando fora do escopo, com justificativa obrigatória. É uma exclusão **lógica e auditável**, recuperável pelo filtro de status correspondente.
+- Ao publicar um parecer, o advogado responsável pode anexar documentos complementares PDF/PNG/JPEG, que ficam visíveis na consulta da demanda e na Central de documentos. A publicação e os metadados dos anexos são gravados na mesma transação.
+
+Detalhes técnicos, critérios de autorização, decisões e roteiro de homologação: `docs/BJN_FILTRO_EXCLUSAO_ANEXOS_PARECER_2026-11-05.md`.
+
 ## Tela inicial e rotas
 
 | Solução | Rota no navegador | Funções preservadas |

@@ -71,3 +71,8 @@
 @media(max-width:1240px){.demand-overview{grid-template-columns:repeat(2,minmax(0,1fr))}.demand-search-status{flex:1 1 220px}}
 @media(max-width:900px){.demand-management-page .bjn-filters-extended{grid-template-columns:repeat(2,minmax(0,1fr))}.demand-management-header h1{font-size:2.15rem}.demand-management-page .demand-table{min-width:1000px}}
 @media(max-width:620px){.demand-management-page{padding:20px 14px 60px}.demand-management-header{align-items:flex-start;gap:15px}.demand-management-header .demand-new-action{width:100%}.demand-overview{gap:9px}.demand-overview-card{gap:7px;padding:13px 11px}.demand-overview-icon{display:none}.demand-overview-card strong{font-size:1.35rem}.demand-panel-heading{padding:19px 17px 13px;flex-direction:column;align-items:flex-start}.demand-management-page .bjn-demand-tabs{padding:0 17px;gap:14px}.demand-tab-hint{display:none}.demand-search-section{padding:15px}.demand-search-primary{align-items:stretch}.demand-search-input-group,.demand-search-status{flex:1 0 100%}.demand-search-submit,.demand-filter-trigger{flex:1}.demand-management-page .bjn-filters-extended{grid-template-columns:1fr;padding:12px}.demand-management-page .bjn-bulk-panel{margin:14px;padding:13px}.demand-management-page .bjn-bulk-panel>button{width:100%}.demand-table-heading,.demand-table-footer{padding:13px 16px}.demand-table-footer{flex-direction:column;align-items:flex-start}}
+
+/* O filtro de natureza fica visível sem comprometer a área de pesquisa em telas menores. */
+.demand-management-page .demand-search-nature{flex:0 1 210px}
+@media(max-width:900px){.demand-management-page .demand-search-nature{flex:1 1 190px}}
+@media(max-width:620px){.demand-management-page .demand-search-nature{flex:1 0 100%}}

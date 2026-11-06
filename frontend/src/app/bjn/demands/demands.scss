@@ -121,3 +121,31 @@
 .bjn-nature-corrected{border-color:#d7b8a3;background:#fff8f0}.bjn-nature-notice strong{color:#344855}.bjn-nature-notice p{margin:6px 0}.bjn-nature-notice small{font-size:.74rem;color:#63717e}
 @media(max-width:900px){.bjn-filters-extended{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:570px){.bjn-filters-extended{grid-template-columns:1fr}.bjn-bulk-panel{align-items:stretch}.bjn-bulk-panel button{width:100%}}
+
+/* Ações sensíveis e anexos jurídicos: informação antes da confirmação. */
+.bjn-scope-exclusion{border-top:1px solid #e5e9ee;margin-top:18px;padding-top:17px;display:grid;gap:10px}
+.bjn-scope-exclusion strong{font-size:.88rem;color:#394959}
+.bjn-scope-exclusion p{font-size:.76rem;line-height:1.6;color:#697987}
+.bjn-exclusion-trigger,.bjn-exclusion-confirm{justify-self:start;border:1px solid #ba7080;border-radius:8px;background:#fff8f9;color:#9d2944;min-height:39px;padding:9px 12px;font:inherit;font-size:.77rem;font-weight:700}
+.bjn-exclusion-confirm{background:#aa2949;color:#fff;border-color:#aa2949}
+.bjn-exclusion-confirm:disabled{opacity:.5;cursor:not-allowed}
+.bjn-exclusion-actions{display:flex;gap:10px;flex-wrap:wrap}
+.bjn-opinion-attachments{display:grid;gap:10px;padding:15px;border:1px solid #dce4e9;background:#fafbfc;border-radius:9px}
+.bjn-opinion-attachments strong{color:#344958;font-size:.84rem}
+.bjn-opinion-attachments p{margin-top:5px}
+.bjn-opinion-attachments>.demand-outlined{justify-self:start}
+.bjn-opinion-attachment-list{display:grid;gap:8px}
+.bjn-opinion-file{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid #e5e9ed;border-radius:7px;padding:9px 11px;background:white;font-size:.76rem;overflow-wrap:anywhere}
+.bjn-opinion-file button{font:inherit;color:#a73550;background:transparent;border:0;text-decoration:underline;cursor:pointer}
+.bjn-published-attachments{display:grid;gap:9px;padding-top:14px;margin-top:15px;border-top:1px solid #dce3e9}
+.bjn-published-attachments h3{font-size:.9rem}.bjn-published-attachments p{font-size:.75rem;color:#687b88}
+.bjn-published-attachments button{justify-self:start;max-width:100%;white-space:normal;text-align:left;overflow-wrap:anywhere}
+.demand-pill[data-status="EXCLUIDA_ESCOPO"]{background:#f1f2f4;border-color:#d4dae0;color:#58626e}
+
+/* Confirmação de exclusão sem apagar dados ou esconder a justificativa. */
+.bjn-list-exclusion{margin:0 24px 18px;padding:17px;border:1px solid #e5c2cb;border-radius:9px;background:#fffafb}
+.bjn-list-exclusion textarea{width:100%;resize:vertical;min-height:85px;border:1px solid #d7dfe5;border-radius:7px;padding:10px;font:inherit;font-size:.79rem}
+.bjn-row-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.bjn-row-exclude{border:0;background:transparent;color:#aa3450;text-decoration:underline;font-size:.73rem;font-weight:650;padding:4px;cursor:pointer}
+.bjn-row-exclude:focus-visible,.bjn-exclusion-confirm:focus-visible{outline:3px solid #5f91b6;outline-offset:2px}
+@media(max-width:620px){.bjn-list-exclusion{margin:0 14px 14px}}

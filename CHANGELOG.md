@@ -49,3 +49,31 @@ Os históricos de origem do BJN e do chatbot permanecem em suas documentações 
 - Preservadas APIs BJN/Chatbot/Auditoria, autenticação, gerador corporativo e lógica dos cálculos.
 - Validações executadas: 82 testes Python e 44 testes frontend; testes E2E visuais e compilação Angular pendentes em ambiente com npm instalado.
 - Responsável: equipe técnica do projeto; homologação Jurídico/Compliance/DPO pendente.
+
+## 2026-11-05 — BJN: filtro por natureza, exclusão de escopo e complementos do parecer
+
+- Filtro por natureza com catálogo existente, consulta parametrizada e restrições de perfil preservadas.
+- Exclusão lógica de demanda antes da distribuição, apenas por gestor, exigindo justificativa de 10 a 300 caracteres e evento auditável.
+- Exclusões lógicas preservam consulta pelo status explícito e pelo detalhe autenticado, mantendo histórico auditável.
+- Publicação de parecer com anexos opcionais na mesma transação, categoria `PARECER_COMPLEMENTAR` e visualização na Central de documentos.
+- Mantida a compatibilidade do endpoint JSON anterior de publicação.
+- Adicionados testes integrados com PDFs sintéticos e teste estrutural da interface.
+- Decisão técnica, limitações e homologação descritas em `docs/BJN_FILTRO_EXCLUSAO_ANEXOS_PARECER_2026-11-05.md`.
+- Responsável: equipe técnica do projeto; validação jurídica, de segurança e de frontend Angular em ambiente homologado pendente.
+
+## 2026-11-05 — BJN: visibilidade das demandas excluídas em Todos os status
+
+- A consulta sem status específico agora retorna também `EXCLUIDA_ESCOPO`, com a mesma restrição de acesso por perfil.
+- A aba **Pendentes** continua omitindo demandas excluídas, mesmo quando o status excluído for enviado à API.
+- O filtro **Todos os status** explicita que inclui excluídas; a confirmação de exclusão explica essa regra.
+- O indicador **Sem advogado designado** desconsidera demandas já excluídas, que não estão disponíveis para distribuição.
+- Casos de regressão adicionados para GET/POST, filtro vazio, escopo do solicitante e exclusão das pendências.
+- Justificativa: permitir acompanhamento e auditoria sem reativar demandas encerradas administrativamente.
+- Responsável: equipe técnica do projeto; compilação Angular e homologação jurídica permanecem pendentes.
+
+## 2026-11-05 — BJN: rótulo simplificado do filtro de status
+
+- O seletor de status apresenta apenas **Todos os status**, sem texto adicional.
+- O valor enviado à API permanece vazio quando selecionado, preservando a inclusão de demandas excluídas e as restrições de perfil já aplicadas.
+- O comportamento da aba **Pendentes** permanece inalterado.
+- Teste de regressão atualizado para exigir o rótulo exato.

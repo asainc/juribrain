@@ -24,7 +24,7 @@ from backend.contracts.base import Contract
 from backend.errors import ServiceError
 from backend.services.bjn_journey import validate_journey_fields, NATURES
 
-STATUS = ("RECEBIDA", "EM_TRIAGEM", "EM_ANALISE", "AGUARDANDO_INFORMACOES", "CONCLUIDA", "CANCELADA", "RESOLVIDA_IA", "TRIAGEM_ADMINISTRATIVA", "ENCAMINHADA_AREA", "PARECER_EM_REVISAO")
+STATUS = ("RECEBIDA", "EM_TRIAGEM", "EM_ANALISE", "AGUARDANDO_INFORMACOES", "CONCLUIDA", "CANCELADA", "RESOLVIDA_IA", "TRIAGEM_ADMINISTRATIVA", "ENCAMINHADA_AREA", "PARECER_EM_REVISAO", "EXCLUIDA_ESCOPO")
 
 # Identidades sintéticas de desenvolvimento, nunca cadastradas como pessoas reais.
 DEMO_LAWYERS = {
@@ -77,6 +77,12 @@ class BulkAssignment(Contract):
 
     lawyer_email: str = Field(min_length=5, max_length=250)
     demand_ids: list[str] = Field(min_length=1, max_length=50)
+
+
+class ScopeExclusion(Contract):
+    """Justificativa obrigatória para a exclusão lógica de demanda não distribuída."""
+
+    reason: str = Field(min_length=10, max_length=300)
 
 
 class StatusUpdate(Contract):
@@ -243,12 +249,20 @@ class DemandStore:
 
     def list_demands(self, actor: Actor, status: str = "", query: str = "", limit: int = 50,
                      branch: str = "", registered_email: str = "", from_date: str = "", client_cpf: str = "",
-                     to_date: str = "", lawyer: str = "", pending_only: bool = False) -> list[dict]:
+                     to_date: str = "", lawyer: str = "", pending_only: bool = False, nature: str = "") -> list[dict]:
         """Lista solicitações acessíveis em ordem decrescente, sem expor pessoas de outras equipes."""
         if status and status not in STATUS:
             raise ServiceError("Status inválido.", 422, code="INVALID_STATUS")
+        if nature and nature not in NATURES:
+            raise ServiceError("Natureza da demanda inválida.", 422, code="INVALID_NATURE_FILTER")
         conditions: list[str] = []
         params: list[object] = []
+        # Sem filtro de status, a listagem mostra todos os estados, inclusive
+        # exclusões lógicas. A aba Pendentes usa uma condição própria que impede
+        # que demandas excluídas voltem ao fluxo operacional.
+        if nature:
+            conditions.append("service_nature = ?")
+            params.append(nature)
         if actor.role != "admin":
             if actor.role == "advogado":
                 conditions.append("(requester_id = ? OR lawyer_email = ?)")
@@ -292,7 +306,7 @@ class DemandStore:
                 params.append(term_email)
         if pending_only:
             # Não atribuídas aparecem apenas ao administrador. Para advogado, somente suas próprias.
-            conditions.append("status NOT IN ('CONCLUIDA','CANCELADA','RESOLVIDA_IA','ENCAMINHADA_AREA')")
+            conditions.append("status NOT IN ('CONCLUIDA','CANCELADA','RESOLVIDA_IA','ENCAMINHADA_AREA','EXCLUIDA_ESCOPO')")
             if actor.role == "advogado":
                 conditions.append("lawyer_email = ?")
                 params.append(actor.user_id)
@@ -357,8 +371,10 @@ class DemandStore:
             base["can_review_opinion"] = actor.role == "advogado" and base["lawyer_email"] == actor.user_id and base["status"] in {"EM_ANALISE", "PARECER_EM_REVISAO"}
             base["can_review_competence"] = actor.role == "admin" and base["status"] == "TRIAGEM_ADMINISTRATIVA"
             base["can_resolve_ai"] = (base["requester_id"] == actor.user_id and base["status"] in {"RECEBIDA", "EM_TRIAGEM"} and not base["lawyer_email"] and bool(guidance) and guidance["encaminhamento"] == "POSSIVEL_AUTOATENDIMENTO")
-            base["can_manage"] = actor.role == "admin" or (actor.role == "advogado" and base["lawyer_email"] == actor.user_id)
-            base["can_assign"] = actor.role == "admin"
+            base["can_manage"] = base["status"] != "EXCLUIDA_ESCOPO" and (actor.role == "admin" or (actor.role == "advogado" and base["lawyer_email"] == actor.user_id))
+            base["can_assign"] = actor.role == "admin" and base["status"] not in {"CONCLUIDA", "CANCELADA", "RESOLVIDA_IA", "ENCAMINHADA_AREA", "EXCLUIDA_ESCOPO"}
+            base["can_exclude_scope"] = (actor.role == "admin" and not base["lawyer_email"]
+                and base["status"] in {"RECEBIDA", "EM_TRIAGEM", "TRIAGEM_ADMINISTRATIVA"})
             return base
 
     def create(self, data: DemandCreate, actor: Actor, docs: list[SavedDocument]) -> dict:
@@ -426,7 +442,7 @@ class DemandStore:
         try:
             with self._connect() as db:
                 demand = self._require(db, demand_id, actor)
-                if demand["status"] in {"CONCLUIDA", "CANCELADA", "RESOLVIDA_IA", "ENCAMINHADA_AREA"}:
+                if demand["status"] in {"CONCLUIDA", "CANCELADA", "RESOLVIDA_IA", "ENCAMINHADA_AREA", "EXCLUIDA_ESCOPO"}:
                     raise ServiceError("Não é possível anexar documentos a uma demanda encerrada.", 409, code="CLOSED_DEMAND")
                 count = db.execute("SELECT COUNT(*) FROM bjn_documents WHERE demand_id=?", (demand_id,)).fetchone()[0]
                 if count + len(docs) > MAX_DOCUMENTS_PER_DEMAND:
@@ -454,6 +470,29 @@ class DemandStore:
                 raise ServiceError("Arquivo indisponível. Contate o suporte.", 503, code="DOCUMENT_UNAVAILABLE")
             return path, dict(row)
 
+    def exclude_scope(self, demand_id: str, actor: Actor, reason: str) -> dict:
+        """Exclui logicamente, sem apagar documentos nem o histórico do atendimento.
+
+        A exclusão está disponível apenas antes da atribuição e exige decisão
+        motivada do gestor. O registro permanece acessível pelo protocolo e
+        pelo filtro de status para fins de auditoria.
+        """
+        if actor.role != "admin":
+            raise ServiceError("Somente o gestor pode excluir demandas fora do escopo.", 403, code="FORBIDDEN")
+        note = reason.strip()
+        if not 10 <= len(note) <= 300:
+            raise ServiceError("Informe uma justificativa de 10 a 300 caracteres.", 422, code="EXCLUSION_REASON_REQUIRED")
+        with self._connect() as db:
+            # Bloqueia concorrência com distribuição enquanto a exclusão é validada.
+            db.execute("BEGIN IMMEDIATE")
+            demand = self._require(db, demand_id, actor)
+            if demand["lawyer_email"] or demand["status"] not in {"RECEBIDA", "EM_TRIAGEM", "TRIAGEM_ADMINISTRATIVA"}:
+                raise ServiceError("Somente demandas não distribuídas e abertas podem ser excluídas do escopo.", 409, code="EXCLUSION_NOT_ALLOWED")
+            now = utc_now()
+            db.execute("UPDATE bjn_demands SET status='EXCLUIDA_ESCOPO',updated_at=? WHERE id=?", (now, demand_id))
+            self._event(db, demand_id, "EXCLUSAO_ESCOPO", "Excluída do fluxo por decisão do gestor. Justificativa: " + note, actor, now)
+        return self.get_demand(demand_id, actor)
+
     def assign(self, demand_id: str, actor: Actor, lawyer_email: str) -> dict:
         """Distribuição MANUAL, somente para advogado explicitamente autorizado."""
         if actor.role != "admin":
@@ -463,7 +502,7 @@ class DemandStore:
             raise ServiceError("Advogado não consta do cadastro autorizado.", 422, code="UNKNOWN_LAWYER")
         with self._connect() as db:
             demand = self._require(db, demand_id, actor)
-            if demand["status"] in {"CONCLUIDA", "CANCELADA", "RESOLVIDA_IA", "ENCAMINHADA_AREA"}:
+            if demand["status"] in {"CONCLUIDA", "CANCELADA", "RESOLVIDA_IA", "ENCAMINHADA_AREA", "EXCLUIDA_ESCOPO"}:
                 raise ServiceError("Demanda encerrada não pode ser distribuída.", 409, code="CLOSED_DEMAND")
             if demand["status"] == "TRIAGEM_ADMINISTRATIVA":
                 raise ServiceError("Conclua a triagem administrativa antes da distribuição.", 409, code="COMPETENCE_PENDING")
@@ -485,7 +524,7 @@ class DemandStore:
             # Uma única transação impede a distribuição parcial quando houver erro.
             rows = [self._require(db, item, actor) for item in demand_ids]
             for row in rows:
-                if row["status"] in {"CONCLUIDA", "CANCELADA", "RESOLVIDA_IA", "ENCAMINHADA_AREA"}:
+                if row["status"] in {"CONCLUIDA", "CANCELADA", "RESOLVIDA_IA", "ENCAMINHADA_AREA", "EXCLUIDA_ESCOPO"}:
                     raise ServiceError("Há demanda encerrada na seleção. Nenhuma foi distribuída.", 409, code="CLOSED_DEMAND")
                 if row["status"] == "TRIAGEM_ADMINISTRATIVA":
                     raise ServiceError("Há demanda aguardando triagem administrativa. Nenhuma foi distribuída.", 409, code="COMPETENCE_PENDING")
@@ -501,7 +540,7 @@ class DemandStore:
             raise ServiceError("Natureza identificada não suportada.", 422, code="NATURE_INVALID")
         with self._connect() as db:
             demand = self._require(db, demand_id, actor)
-            if demand["status"] in {"CONCLUIDA", "CANCELADA", "RESOLVIDA_IA", "ENCAMINHADA_AREA"}:
+            if demand["status"] in {"CONCLUIDA", "CANCELADA", "RESOLVIDA_IA", "ENCAMINHADA_AREA", "EXCLUIDA_ESCOPO"}:
                 raise ServiceError("Demanda encerrada não pode ser alterada.", 409, code="CLOSED_DEMAND")
             if demand["lawyer_email"]:
                 raise ServiceError("Natureza de demanda já distribuída exige revisão do advogado.", 409, code="NATURE_REVIEW_REQUIRED")
@@ -579,7 +618,7 @@ class DemandStore:
             "EM_TRIAGEM": {"EM_ANALISE", "AGUARDANDO_INFORMACOES", "CANCELADA"},
             "EM_ANALISE": {"AGUARDANDO_INFORMACOES", "CONCLUIDA", "CANCELADA"},
             "AGUARDANDO_INFORMACOES": {"EM_ANALISE", "CANCELADA"},
-            "CONCLUIDA": set(), "CANCELADA": set(), "RESOLVIDA_IA": set(),
+            "CONCLUIDA": set(), "CANCELADA": set(), "RESOLVIDA_IA": set(), "EXCLUIDA_ESCOPO": set(),
         }
         with self._connect() as db:
             current = self._require(db, demand_id, actor)
@@ -644,24 +683,50 @@ class DemandStore:
             self._event(db, demand_id, "PARECER_RASCUNHO", "Proposta de IA criada para revisão jurídica (não publicada).", actor, now)
         return self.get_demand(demand_id, actor)
 
-    def publish_opinion(self, demand_id: str, actor: Actor, final_text: str) -> dict:
-        """Registra aprovação humana e cria evento de e-mail pendente de despacho."""
+    def publish_opinion(self, demand_id: str, actor: Actor, final_text: str,
+                        attachments: list[SavedDocument] | None = None) -> dict:
+        """Publica o parecer e seus anexos na mesma transação de persistência.
+
+        Um erro de arquivo ou de permissão não pode deixar o parecer concluído
+        sem o documento complementar. Metadados e eventos ficam no SQLite;
+        documentos são armazenados em área privada com identificador aleatório.
+        """
         self.demand_for_opinion(demand_id, actor)
-        with self._connect() as db:
-            now = utc_now()
-            email = db.execute("SELECT requester_email FROM bjn_demand_context WHERE demand_id=?", (demand_id,)).fetchone()
-            # Demandas legadas não possuem cadastro de e-mail: o parecer pode ser
-            # publicado com revisão humana, mas não se cria notificação sem destino.
-            requester_email = email["requester_email"].strip() if email and email["requester_email"] else ""
-            db.execute("""INSERT INTO bjn_opinions(demand_id,final_text,published_at,reviewer_id,version)
-                VALUES (?,?,?,?,1) ON CONFLICT(demand_id) DO UPDATE SET
-                final_text=excluded.final_text,published_at=excluded.published_at,reviewer_id=excluded.reviewer_id,
-                version=bjn_opinions.version+1""", (demand_id, final_text.strip(), now, actor.user_id))
-            db.execute("UPDATE bjn_demands SET status=?,updated_at=? WHERE id=?", ("CONCLUIDA", now, demand_id))
-            if requester_email:
-                db.execute("INSERT INTO bjn_notifications VALUES (?,?,?,?,?,?,?)", (
-                    uuid4().hex, demand_id, requester_email, "PENDENTE", now, None, ""))
-            self._event(db, demand_id, "PARECER_PUBLICADO", "Parecer revisado e publicado pelo advogado responsável.", actor, now)
+        docs = attachments or []
+        if any(item.category != "PARECER_COMPLEMENTAR" for item in docs):
+            raise ServiceError("Categoria do anexo do parecer inválida.", 422, code="INVALID_CATEGORY")
+        moved: list[Path] = []
+        try:
+            with self._connect() as db:
+                # O bloqueio de escrita evita publicar após mudança simultânea de responsável/status
+                # ou ultrapassar o limite de documentos por uploads concorrentes.
+                db.execute("BEGIN IMMEDIATE")
+                demand = self._require(db, demand_id, actor)
+                if actor.role != "advogado" or demand["lawyer_email"] != actor.user_id or demand["status"] not in {"EM_ANALISE", "PARECER_EM_REVISAO"}:
+                    raise ServiceError("Parecer fora da etapa de publicação autorizada.", 409, code="OPINION_STATE_INVALID")
+                current = db.execute("SELECT COUNT(*) FROM bjn_documents WHERE demand_id=?", (demand_id,)).fetchone()[0]
+                if current + len(docs) > MAX_DOCUMENTS_PER_DEMAND:
+                    raise ServiceError("Limite de documentos da demanda excedido.", 422, code="TOO_MANY_FILES")
+                now = utc_now()
+                email = db.execute("SELECT requester_email FROM bjn_demand_context WHERE demand_id=?", (demand_id,)).fetchone()
+                requester_email = email["requester_email"].strip() if email and email["requester_email"] else ""
+                for document in docs:
+                    moved.append(self._insert_document(db, demand_id, actor, document, now))
+                db.execute("""INSERT INTO bjn_opinions(demand_id,final_text,published_at,reviewer_id,version)
+                    VALUES (?,?,?,?,1) ON CONFLICT(demand_id) DO UPDATE SET
+                    final_text=excluded.final_text,published_at=excluded.published_at,reviewer_id=excluded.reviewer_id,
+                    version=bjn_opinions.version+1""", (demand_id, final_text.strip(), now, actor.user_id))
+                db.execute("UPDATE bjn_demands SET status=?,updated_at=? WHERE id=?", ("CONCLUIDA", now, demand_id))
+                if requester_email:
+                    db.execute("INSERT INTO bjn_notifications VALUES (?,?,?,?,?,?,?)", (
+                        uuid4().hex, demand_id, requester_email, "PENDENTE", now, None, ""))
+                self._event(db, demand_id, "PARECER_PUBLICADO", "Parecer revisado e publicado pelo advogado responsável.", actor, now)
+                if docs:
+                    self._event(db, demand_id, "PARECER_ANEXOS", f"{len(docs)} documento(s) complementar(es) do parecer publicado(s).", actor, now)
+        except Exception:
+            for path in moved:
+                path.unlink(missing_ok=True)
+            raise
         return self.get_demand(demand_id, actor)
 
     def pending_notifications(self, demand_id: str) -> list[dict]:
@@ -679,7 +744,7 @@ class DemandStore:
 def save_upload(stream: BinaryIO, original_name: str, media_type: str, temp_directory: Path, category: str) -> SavedDocument:
     """Valida assinatura e limite durante leitura em blocos, sem carregar o arquivo na memória."""
     name = safe_original_name(original_name)
-    if category not in {"ANEXO", "DOCUMENTO_ENVIADO"}:
+    if category not in {"ANEXO", "DOCUMENTO_ENVIADO", "PARECER_COMPLEMENTAR"}:
         raise ServiceError("Categoria inválida.", 422, code="INVALID_CATEGORY")
     tmp_path: Path | None = None
     try:

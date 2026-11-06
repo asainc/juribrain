@@ -16,7 +16,7 @@ export type NatureClassification = {
 };
 export type BulkAssignmentResult = {assigned_count:number;demand_ids:string[];lawyer_email:string};
 export type LawyerOption = {email:string;name:string;demo:boolean};
-export type DemandStatus = 'RECEBIDA' | 'EM_TRIAGEM' | 'EM_ANALISE' | 'AGUARDANDO_INFORMACOES' | 'CONCLUIDA' | 'CANCELADA' | 'RESOLVIDA_IA' | 'TRIAGEM_ADMINISTRATIVA' | 'ENCAMINHADA_AREA' | 'PARECER_EM_REVISAO';
+export type DemandStatus = 'RECEBIDA' | 'EM_TRIAGEM' | 'EM_ANALISE' | 'AGUARDANDO_INFORMACOES' | 'CONCLUIDA' | 'CANCELADA' | 'RESOLVIDA_IA' | 'TRIAGEM_ADMINISTRATIVA' | 'ENCAMINHADA_AREA' | 'PARECER_EM_REVISAO' | 'EXCLUIDA_ESCOPO';
 export type InvolvedPerson = {type:string; name:string; document:string; period:string};
 export type DemandInput = {
   requesting_department:string;
@@ -38,13 +38,13 @@ export type DemandSummary = {
 };
 export type DemandDocument = {
   id:string; original_name:string; media_type:string; file_size:number;
-  sha256:string; category:'ANEXO'|'DOCUMENTO_ENVIADO'; uploaded_by:string; created_at:string;
+  sha256:string; category:'ANEXO'|'DOCUMENTO_ENVIADO'|'PARECER_COMPLEMENTAR'; uploaded_by:string; created_at:string;
 };
 export type DemandEvent = {event_type:string; description:string; actor_id:string; created_at:string};
 export type DemandDetail = DemandSummary & {
   requesting_department:string; description:string; requester_id:string;
   involved:InvolvedPerson[]; documents:DemandDocument[]; events:DemandEvent[];
-  can_manage:boolean; can_assign:boolean; can_resolve_ai:boolean; ai_guidance:DemandGuidance|null;
+  can_manage:boolean; can_assign:boolean; can_exclude_scope:boolean; can_resolve_ai:boolean; ai_guidance:DemandGuidance|null;
   registration:DemandRegistration|null;opinion:DemandOpinion|null;can_review_opinion:boolean;can_review_competence:boolean;
   document_ai_suggestion:DocumentAISuggestion|null;
   document_analysis_error?:string;
@@ -84,7 +84,7 @@ export class BjnDemandApiService {
 
   /** Mantém a autenticação sob responsabilidade do gateway, sem credenciais no frontend. */
   configuration() {return this.http.get<DemandConfiguration>(`${this.endpoint}/configuracao`,this.headers());}
-  list(search='',status='',filters:{branch?:string;registered_email?:string;from_date?:string;to_date?:string;lawyer?:string;pending_only?:boolean;client_cpf?:string}={}) {
+  list(search='',status='',filters:{branch?:string;registered_email?:string;from_date?:string;to_date?:string;lawyer?:string;pending_only?:boolean;client_cpf?:string;nature?:string}={}) {
     // Os documentos de identificação nunca são enviados como parâmetros de URL.
     return this.http.post<{items:DemandSummary[]}>(`${this.endpoint}/consulta`,{search,status,...filters},this.headers());
   }
@@ -100,6 +100,18 @@ export class BjnDemandApiService {
   }
   publishOpinion(id:string,finalText:string,confirmed:boolean){
     return this.http.post<DemandDetail>(`${this.endpoint}/${encodeURIComponent(id)}/parecer/publicar`,{final_text:finalText,human_review_confirmed:confirmed},this.headers());
+  }
+  /** Parecer e documentos complementares são publicados de forma atômica. */
+  publishOpinionWithAttachments(id:string,finalText:string,confirmed:boolean,files:File[]){
+    const form=new FormData();
+    form.append('final_text',finalText);
+    form.append('human_review_confirmed',String(confirmed));
+    for(const file of files)form.append('files',file,file.name);
+    return this.http.post<DemandDetail>(`${this.endpoint}/${encodeURIComponent(id)}/parecer/publicar-com-anexos`,form,this.headers());
+  }
+  /** Exclusão lógica com justificativa, restrita ao gestor antes da distribuição. */
+  excludeScope(id:string,reason:string){
+    return this.http.post<DemandDetail>(`${this.endpoint}/${encodeURIComponent(id)}/exclusao-escopo`,{reason},this.headers());
   }
   /** Prévia efêmera: um upload inicia text_generator com prompt da natureza selecionada. */
   analyzeUploadedDocuments(nature:string,description:string,files:File[]){

@@ -16,7 +16,7 @@ from backend.services.bjn_demand_store import DEMO_LAWYERS
 
 from backend.errors import ErrorField, ServiceError
 from backend.services.bjn_demand_store import (
-    Actor, Assignment, BulkAssignment, DemandCreate, DemandStore, MAX_DOCUMENTS_PER_DEMAND,
+    Actor, Assignment, BulkAssignment, ScopeExclusion, DemandCreate, DemandStore, MAX_DOCUMENTS_PER_DEMAND,
     StatusUpdate, SavedDocument, save_upload,
 )
 
@@ -96,11 +96,11 @@ def demand_configuration(request: Request) -> dict:
 @router.get("")
 def list_demands(request: Request, status: str = "", search: str = "", limit: int = Query(50, ge=1, le=50),
                  branch: str = "", registered_email: str = "", from_date: str = "", client_cpf: str = "",
-                 to_date: str = "", lawyer: str = "", pending_only: bool = False) -> dict:
+                 to_date: str = "", lawyer: str = "", pending_only: bool = False, nature: str = "") -> dict:
     """Filtros adicionais preservam restrições de visibilidade por usuário."""
     return {"items": store_from(request).list_demands(actor_from(request), status, search, limit,
                branch=branch, registered_email=registered_email, from_date=from_date, client_cpf=client_cpf,
-               to_date=to_date, lawyer=lawyer, pending_only=pending_only)}
+               to_date=to_date, lawyer=lawyer, pending_only=pending_only, nature=nature)}
 
 
 def _public_validation_fields(error: ValidationError) -> list[ErrorField]:
@@ -142,6 +142,7 @@ class DemandSearch(Contract):
     client_cpf: str = Field(default="", max_length=14)
     to_date: str = Field(default="", max_length=10)
     lawyer: str = Field(default="", max_length=120)
+    nature: str = Field(default="", max_length=120)
     pending_only: bool = False
 
 
@@ -151,7 +152,7 @@ def search_demands(body: DemandSearch, request: Request) -> dict:
     return {"items": store_from(request).list_demands(actor_from(request), body.status, body.search, 50,
         branch=body.branch, registered_email=body.registered_email,
         from_date=body.from_date, client_cpf=body.client_cpf,
-        to_date=body.to_date, lawyer=body.lawyer, pending_only=body.pending_only)}
+        to_date=body.to_date, lawyer=body.lawyer, pending_only=body.pending_only, nature=body.nature)}
 
 
 @router.post("/{demand_id}/notificacoes/reprocessar")
@@ -371,6 +372,31 @@ def publish_opinion(demand_id: str, body: OpinionPublish, request: Request) -> d
     return {**published, "notification_dispatch": notification}
 
 
+@router.post("/{demand_id}/parecer/publicar-com-anexos")
+def publish_opinion_with_attachments(
+    demand_id: str, request: Request,
+    final_text: Annotated[str, Form(min_length=40, max_length=18000)],
+    human_review_confirmed: Annotated[bool, Form()],
+    files: Annotated[list[UploadFile] | None, File()] = None,
+) -> dict:
+    """Recebe PDF/imagens junto com o parecer revisado, em uma única operação."""
+    if not human_review_confirmed:
+        raise ServiceError("O advogado deve confirmar a revisão humana.", 422, code="REVIEW_REQUIRED")
+    actor = actor_from(request)
+    store = store_from(request)
+    # Confirma acesso e etapa antes de persistir arquivos ou chamar o envio.
+    store.demand_for_opinion(demand_id, actor)
+    saved = _uploaded(request, files or [], "PARECER_COMPLEMENTAR")
+    try:
+        published = store.publish_opinion(demand_id, actor, final_text, saved)
+    finally:
+        _cleanup(saved)
+    result = (dispatch_notifications(store, request.app.state.settings, demand_id)
+              if published.get("registration") and published["registration"].get("requester_email")
+              else {"status": "SEM_EMAIL_CADASTRADO", "count": 0})
+    return {**published, "notification_dispatch": result}
+
+
 @router.get("/{demand_id}")
 def demand_details(demand_id: str, request: Request) -> dict:
     """Agrega detalhes, documentos e histórico para a tela de acompanhamento."""
@@ -415,6 +441,12 @@ def view_document(demand_id: str, document_id: str, request: Request) -> FileRes
 def assign_multiple_demands(body: BulkAssignment, request: Request) -> dict:
     """Distribui lote de forma transacional, sem comprometer demandas inválidas."""
     return store_from(request).assign_bulk(actor_from(request), body.lawyer_email, body.demand_ids)
+
+
+@router.post("/{demand_id}/exclusao-escopo")
+def exclude_out_of_scope_demand(demand_id: str, body: ScopeExclusion, request: Request) -> dict:
+    """Registra uma exclusão lógica, com justificativa e autoria auditáveis."""
+    return store_from(request).exclude_scope(demand_id, actor_from(request), body.reason)
 
 
 @router.patch("/{demand_id}/atribuicao")

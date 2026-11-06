@@ -59,5 +59,5 @@ test('publicação é independente da geração por IA e orienta sobre revisão 
   assert.ok(detail.includes('Informe ao menos 40 caracteres'));
   assert.ok(detail.includes('Marque a confirmação de revisão humana'));
   assert.ok(detail.includes('SEM_EMAIL_CADASTRADO'));
-  assert.ok(detail.includes('this.api.publishOpinion(this.demandId,this.finalOpinion,true)'));
+  assert.ok(detail.includes('this.api.publishOpinionWithAttachments(this.demandId,this.finalOpinion,true,this.opinionFiles())'));
 });
