@@ -41,7 +41,7 @@ import {demandStatusLabels,friendlyApiError,readableDate,readableSize,selectable
     <div class="demand-detail-layout">
       <div class="demand-detail-main">
         <section class="surface demand-card" aria-labelledby="detail-resumo"><div class="demand-card-heading"><h2 id="detail-resumo">Resumo da solicitação</h2><span class="demand-subtle">Informações do cadastro</span></div>
-          <div class="demand-facts"><div><span>Área de consulta</span><strong>{{demand.consult_area}}</strong></div><div><span>Natureza do serviço</span><strong>{{demand.service_nature}}</strong></div><div><span>Departamento Solicitante</span><strong>{{demand.requesting_department}}</strong></div></div>
+          <div class="demand-facts"><div><span>Departamento consultado</span><strong>{{demand.registration?.consulted_department || "Registro anterior à nova triagem"}}</strong></div><div><span>Área de consulta</span><strong>{{demand.consult_area}}</strong></div><div><span>Natureza do serviço</span><strong>{{demand.service_nature}}</strong></div><div><span>Solicitante</span><strong>{{demand.requesting_department}}</strong></div></div>
           <div class="demand-description"><h3>Descrição da consulta</h3><p>{{demand.description}}</p></div>
         </section>
         @if(demand.registration;as registration){
@@ -68,7 +68,9 @@ import {demandStatusLabels,friendlyApiError,readableDate,readableSize,selectable
         @if(demand.can_review_opinion){
           <section class="surface demand-card bjn-opinion-editor" aria-labelledby="opinion-editor-title"><span class="eyebrow">EXCLUSIVO DO ADVOGADO RESPONSÁVEL</span><h2 id="opinion-editor-title">Elaboração e validação do parecer</h2>
             <p>A IA pode sugerir um rascunho, mas somente você pode revisar, ajustar e publicar o parecer.</p>
-            <button type="button" class="demand-outlined" (click)="generateDraft()" [disabled]="generatingOpinion() || !configuration()?.opinion_ai_available">{{generatingOpinion()?'Preparando rascunho...':'Preparar rascunho com text_generator'}}</button>
+            @if(generatingOpinion()){<p class="bjn-upload-analysis-status" role="status">A IA está preparando automaticamente o rascunho para sua revisão.</p>}
+            @else if(demand.opinion?.draft_text){<p class="demand-validation-ready" role="status">Rascunho da IA preparado automaticamente. Confira o conteúdo antes de publicar.</p>}
+            @else if(configuration()?.opinion_ai_available){<p class="demand-muted" role="status">A geração automática é iniciada ao abrir esta demanda. Você pode redigir ou editar o parecer durante a análise.</p>}
             @if(configuration() && !configuration()?.opinion_ai_available){<p class="demand-muted">{{configuration()?.ai_configuration?.message || 'IA indisponível.'}} O parecer ainda pode ser escrito manualmente.</p>}
             <div class="demand-field"><label for="opinion-text">Texto final do parecer <span class="required">*</span></label><textarea id="opinion-text" class="bjn-opinion-input" rows="12" maxlength="18000" [(ngModel)]="finalOpinion" placeholder="Revise a proposta de IA ou redija o parecer completo"></textarea></div>
             <div class="bjn-opinion-attachments" aria-label="Documentos complementares ao parecer">
@@ -241,6 +243,7 @@ export class BjnDemandDetailComponent implements OnInit,OnDestroy {
     return 1;
   }
   selectedLawyer='';newStatus='';statusNote='';
+  private automaticDraftAttempted=false;
   private disposed=false;
   private previewGeneration=0;
   private get demandId():string{return this.route.snapshot.paramMap.get('id') || '';}
@@ -260,6 +263,7 @@ export class BjnDemandDetailComponent implements OnInit,OnDestroy {
     // Descartar documentos e rascunhos anteriores impede vazamento entre perfis.
     this.previewGeneration++;this.cleanupPreview();this.selected.set(null);
     this.record.set(null);this.configuration.set(null);this.finalOpinion='';this.humanReviewed=false;
+    this.automaticDraftAttempted=false;
     this.opinionError.set('');this.error.set('');this.opinionFiles.set([]);this.showExcludeScope.set(false);this.scopeExclusionReason='';
   }
   ngOnInit():void {void this.load();}
@@ -270,7 +274,15 @@ export class BjnDemandDetailComponent implements OnInit,OnDestroy {
     try{const [demand,config]=await Promise.all([firstValueFrom(this.api.detail(this.demandId)),firstValueFrom(this.api.configuration())]);
       if(this.disposed)return;
       this.record.set(demand);this.configuration.set(config);
-      if(demand.can_review_opinion)this.finalOpinion=demand.opinion?.draft_text||demand.opinion?.final_text||'';
+      if(demand.can_review_opinion){
+        this.finalOpinion=demand.opinion?.draft_text||demand.opinion?.final_text||'';
+        // Geração automática apenas quando ainda não existe rascunho.
+        // Falhas da IA não impedem a escrita e a revisão humana do parecer.
+        if(!this.finalOpinion && config.opinion_ai_available && !this.automaticDraftAttempted){
+          this.automaticDraftAttempted=true;
+          void this.generateDraft();
+        }
+      }
       if(!this.selected() && demand.documents.length)void this.preview(demand.documents[0]);
     }catch(error){if(!this.disposed)this.error.set(friendlyApiError(error));}
     finally{this.busy.set(false);}
@@ -360,7 +372,14 @@ export class BjnDemandDetailComponent implements OnInit,OnDestroy {
   }
   async generateDraft():Promise<void>{
     if(this.generatingOpinion())return;this.generatingOpinion.set(true);this.opinionError.set('');
-    try{const updated=await firstValueFrom(this.api.generateOpinionDraft(this.demandId));this.record.set(updated);this.finalOpinion=updated.opinion?.draft_text||'';this.humanReviewed=false;this.opinionFiles.set([]);}
+    try{
+      const updated=await firstValueFrom(this.api.generateOpinionDraft(this.demandId));
+      if(this.disposed || !this.record()?.can_review_opinion)return;
+      this.record.set(updated);
+      // Não sobrescreve uma edição humana iniciada enquanto a IA processava.
+      if(!this.finalOpinion.trim())this.finalOpinion=updated.opinion?.draft_text||'';
+      this.humanReviewed=false;
+    }
     catch(cause){this.opinionError.set(friendlyApiError(cause));}finally{this.generatingOpinion.set(false);}
   }
   opinionDocuments(documents:DemandDocument[]):DemandDocument[]{

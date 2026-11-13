@@ -8,6 +8,7 @@ from fastapi.responses import FileResponse
 from pydantic import ValidationError, Field
 from backend.contracts.base import Contract
 from backend.services.bjn_demand_ai import DemandGuidanceInput
+from backend.services.bjn_directory import departments, agencies
 from backend.services.bjn_nature_classifier import classify_saved_pdfs
 from backend.services.bjn_document_opinion import PROMPTS, MAX_ANALYSIS_FILES
 from backend.services.bjn_journey import TriageInput, routing_decision, NATURES, CompetenceReview, OpinionPublish, validate_journey_fields, issue_triage_proof, verify_triage_proof
@@ -87,6 +88,8 @@ def demand_configuration(request: Request) -> dict:
         # Disponível somente na máquina de desenvolvimento e com perfis fictícios habilitados.
         "demo_session_available": request.app.state.settings.environment == "local" and bool(request.app.state.bjn_demo_lawyers),
         "available_natures": list(NATURES),
+        "department_options": departments(),
+        "agency_options": agencies(),
         "max_file_size_mb": 15,
         "max_files": MAX_DOCUMENTS_PER_DEMAND,
         "accepted_formats": ["PDF", "PNG", "JPEG"],
@@ -106,8 +109,9 @@ def list_demands(request: Request, status: str = "", search: str = "", limit: in
 def _public_validation_fields(error: ValidationError) -> list[ErrorField]:
     """Traduz os campos rejeitados sem repetir valores nem metadados sensíveis do formulário."""
     known_fields = {
-        "requesting_department": "Departamento Solicitante",
-        "legal_department": "Departamento Solicitante",
+        "requesting_department": "Solicitante",
+        "consulted_department": "Departamento consultado",
+        "legal_department": "Solicitante",
         "consult_area": "Área de consulta",
         "service_nature": "Natureza do serviço",
         "title": "Título da demanda",
@@ -136,7 +140,7 @@ class DemandSearch(Contract):
     """Consulta com filtros no corpo da requisição para não expor CPF na URL."""
     search: str = Field(default="", max_length=120)
     status: str = Field(default="", max_length=40)
-    branch: str = Field(default="", max_length=40)
+    branch: str = Field(default="", max_length=120)
     registered_email: str = Field(default="", max_length=120)
     from_date: str = Field(default="", max_length=10)
     client_cpf: str = Field(default="", max_length=14)
@@ -173,6 +177,19 @@ def triage_demand(body: TriageInput, request: Request) -> dict:
     if result["requires_registration"]:
         result["proof"] = issue_triage_proof(actor.user_id, store_from(request).document_key)
     return result
+
+
+def _validate_departments(data: DemandCreate, *, allow_legacy: bool = False) -> None:
+    """Confere o departamento da consulta e a origem contra o catálogo vigente."""
+    # Compatibilidade restrita a clientes antigos na instalação local de testes.
+    # Em implantação corporativa, a seleção explícita é sempre obrigatória.
+    if not data.consulted_department and allow_legacy:
+        return
+    available = departments()
+    if data.requesting_department not in available:
+        raise ServiceError("Selecione um solicitante cadastrado.", 422, code="INVALID_REQUESTING_DEPARTMENT")
+    if data.consulted_department != "4040 - Jurídico" or data.consulted_department not in available:
+        raise ServiceError("O fluxo BJN atende apenas o departamento 4040 - Jurídico.", 422, code="INVALID_CONSULTED_DEPARTMENT")
 
 
 def _refresh_document_suggestion(request: Request, demand: dict, actor: Actor, ids: list[str]) -> dict:
@@ -217,6 +234,7 @@ def create_journey_demand(request: Request, payload: Annotated[str, Form()], fil
     if not verify_triage_proof(data.triage_proof, actor.user_id, store_from(request).document_key):
         raise ServiceError("Triagem ausente ou expirada. Retorne à primeira etapa.", 409, code="TRIAGE_EXPIRED")
     validate_journey_fields(data, len(files or []))
+    _validate_departments(data, allow_legacy=request.app.state.settings.environment == "local")
     uploaded = _uploaded(request, files or [], "ANEXO")
     try:
         created = store_from(request).create(data, actor, uploaded)
@@ -339,8 +357,11 @@ def generate_opinion(demand_id: str, request: Request) -> dict:
     actor = actor_from(request)
     store = store_from(request)
     demand = store.demand_for_opinion(demand_id, actor)
+    # Reaberturas da tela não podem sobrescrever um rascunho já gerado.
+    detail = store.get_demand(demand_id, actor)
+    if detail.get("opinion") and detail["opinion"].get("draft_text"):
+        return detail
     if demand["service_nature"] in PROMPTS:
-        detail = store.get_demand(demand_id, actor)
         pdf_documents = [entry for entry in detail["documents"] if entry["media_type"] == "application/pdf"][:MAX_ANALYSIS_FILES]
         if not pdf_documents:
             raise ServiceError("Não há PDF pesquisável. O advogado pode redigir o parecer manualmente.", 422, code="DOCUMENT_TEXT_UNAVAILABLE")

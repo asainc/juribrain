@@ -6,25 +6,42 @@ import {Router, RouterLink} from '@angular/router';
 import {firstValueFrom} from 'rxjs';
 import {BjnDemandApiService, DemandConfiguration, DemandInput, InvolvedPerson, DemandGuidance, DocumentAISuggestion, NatureClassification, TriageCategory, TriageDecision} from '../../core/bjn-demand-api.service';
 import {friendlyApiError,readableSize} from './demand-ui';
+import {BjnSearchableSelectComponent} from './searchable-select.component';
 
 /** Identifica o campo com problema para orientar a correção sem expor dados do usuário. */
 type ValidationIssue = {fieldId:string; message:string};
 
 @Component({
-  selector:'app-bjn-demand-new',standalone:true,imports:[CommonModule,FormsModule,RouterLink],
+  selector:'app-bjn-demand-new',standalone:true,imports:[CommonModule,FormsModule,RouterLink,BjnSearchableSelectComponent],
   
   template:`
   <main class="demand-shell">
     <nav class="demand-crumb" aria-label="Navegação"><a routerLink="/bjn/demandas">Demandas</a><span>/</span><strong>Nova demanda</strong></nav>
     <header class="demand-heading">
-      <div><span class="eyebrow">BJN · ATENDIMENTO JURÍDICO</span><h1>{{triageComplete()?'Cadastrar demanda':'Como podemos direcionar sua consulta?'}}</h1>
-        <p>{{triageComplete()?'Informe os dados necessários para gerar seu protocolo.':'Uma triagem rápida identifica a equipe ou o canal responsável e evita cadastros desnecessários.'}}</p></div>
+      <div><span class="eyebrow">BJN · ATENDIMENTO JURÍDICO</span><h1>{{triageComplete()?'Cadastrar demanda':departmentSelected()?'Como podemos direcionar sua consulta?':'Qual departamento você deseja consultar?'}}</h1>
+        <p>{{triageComplete()?'Informe os dados necessários para gerar seu protocolo.':departmentSelected()?'Uma triagem rápida identifica a equipe ou o canal responsável.':'Selecione primeiro o departamento que receberá a consulta.'}}</p></div>
       <a routerLink="/bjn/demandas" class="demand-outlined">Consultar demandas</a>
     </header>
     <ol class="bjn-journey-steps" aria-label="Etapas da jornada">
-      @for(step of journeySteps;track $index;let position=$index){<li [class.active]="position === (triageComplete()?1:0)" [attr.aria-current]="position === (triageComplete()?1:0)?'step':null"><span>{{position+1}}</span>{{step}}</li>}
+      @for(step of journeySteps;track $index;let position=$index){<li [class.active]="position === (triageComplete()?2:departmentSelected()?1:0)" [attr.aria-current]="position === (triageComplete()?2:departmentSelected()?1:0)?'step':null"><span>{{position+1}}</span>{{step}}</li>}
     </ol>
-    @if(!triageComplete()){
+    @if(!departmentSelected()){
+      <section class="surface demand-card bjn-department-entry" aria-labelledby="department-choice-title">
+        <div class="demand-section-heading"><span class="demand-step">01</span><div><h2 id="department-choice-title">Departamento consultado</h2><p>Escolha a unidade do Banco que deverá receber sua consulta.</p></div></div>
+        <div class="demand-field"><label for="consulted-dept">Departamento que deseja consultar <span class="required">*</span></label>
+          <app-bjn-searchable-select inputId="consulted-dept" ariaLabel="Departamento consultado" [options]="configuration()?.department_options || []"
+            [value]="form.consulted_department" (valueChange)="form.consulted_department=$event"
+            placeholder="Selecione ou digite código ou nome" [required]="true" />
+        </div>
+        @if(form.consulted_department && form.consulted_department!=='4040 - Jurídico'){
+          <p class="bjn-route-result" role="status">O fluxo de atendimento desta aplicação está disponível para 4040 - Jurídico. O departamento escolhido ainda não possui encaminhamento configurado; nenhuma demanda foi enviada.</p>
+        }
+        @if(!configuration() && !error()){<p class="demand-muted">Carregando cadastro corporativo de departamentos…</p>}
+        @if(error()){<p class="demand-error" role="alert">{{error()}}</p>}
+        <button type="button" class="primary" [disabled]="form.consulted_department!=='4040 - Jurídico' || !configuration()" (click)="confirmDepartment()">Continuar para triagem</button>
+      </section>
+    } @else if(!triageComplete()){
+      <div class="bjn-journey-return"><span>Departamento consultado: {{form.consulted_department}}</span><button type="button" class="demand-outlined" (click)="changeDepartment()">Alterar departamento</button></div>
       <section class="surface demand-card bjn-triage" aria-labelledby="triage-heading">
         <div class="demand-section-heading"><span class="demand-step">01</span><div><h2 id="triage-heading">Identificação da demanda</h2><p>Escolha a opção que melhor descreve sua necessidade.</p></div></div>
         <div class="bjn-triage-options" role="group" aria-label="Tipo da demanda">
@@ -55,16 +72,18 @@ type ValidationIssue = {fieldId:string; message:string};
         </div>
       </section>
     } @else {
-      <div class="bjn-journey-return"><span>Triagem concluída: nenhuma opção de encaminhamento específico.</span><button type="button" class="demand-outlined" (click)="backToTriage()">Alterar resposta</button></div>
+      <div class="bjn-journey-return"><span>Departamento consultado: {{form.consulted_department}} · Triagem concluída.</span><button type="button" class="demand-outlined" (click)="backToTriage()">Alterar resposta</button></div>
     <div class="demand-layout">
       <div class="demand-form-column">
         <section class="surface demand-card" aria-labelledby="cad-dados">
           <div class="demand-section-heading"><span class="demand-step">01</span><div><h2 id="cad-dados">Dados da solicitação</h2><p>Informações que ajudam a direcionar a demanda.</p></div></div>
           <div class="demand-fields">
-            <div class="demand-field"><label for="dept">Departamento Solicitante <span class="required">*</span></label>
-              <input id="dept" maxlength="120" [(ngModel)]="form.requesting_department" placeholder="Informe o departamento" autocomplete="organization" required />
+            <div class="demand-field"><label for="dept">Solicitante <span class="required">*</span></label>
+              <app-bjn-searchable-select inputId="dept" ariaLabel="Solicitante" [options]="configuration()?.department_options || []"
+                [value]="form.requesting_department" (valueChange)="form.requesting_department=$event"
+                placeholder="Selecione ou digite código ou nome" [required]="true" />
             </div>
-            <div class="demand-field"><label>Solicitante</label>
+            <div class="demand-field"><label>Usuário solicitante</label>
               <div class="demand-readonly"><strong>{{configuration()?.actor?.name || 'Validando sessão...'}}</strong><small>Identificação fornecida pela sessão autenticada.</small></div>
             </div>
             <div class="demand-grid-2">
@@ -79,7 +98,11 @@ type ValidationIssue = {fieldId:string; message:string};
               </div>
             </div>
             <div class="demand-grid-2">
-              <div class="demand-field"><label for="agency">Agência <span class="required">*</span></label><input id="agency" maxlength="40" [(ngModel)]="form.branch" placeholder="Identificação da agência" required /></div>
+              <div class="demand-field"><label for="agency">Agência <span class="required">*</span></label>
+                <app-bjn-searchable-select inputId="agency" ariaLabel="Agência" [options]="configuration()?.agency_options || []"
+                  [value]="form.branch" (valueChange)="form.branch=$event" [allowCustomValue]="true"
+                  placeholder="Selecione ou digite código ou nome" [required]="true" />
+              </div>
               <div class="demand-field"><label for="requester-email">E-mail do demandante <span class="required">*</span></label><input id="requester-email" maxlength="250" type="email" [(ngModel)]="form.requester_email" autocomplete="email" placeholder="E-mail corporativo da sessão" required /></div>
             </div>
             <div class="demand-grid-2">
@@ -228,7 +251,7 @@ export class BjnDemandNewComponent implements OnInit {
   readonly guidance=signal<DemandGuidance|null>(null);
   readonly analyzedDescription=signal('');
   readonly size=readableSize;
-  readonly journeySteps=['Triagem','Cadastro','Distribuição','Parecer','Consulta'];
+  readonly journeySteps=['Departamento','Triagem','Cadastro','Distribuição','Parecer','Consulta'];
   readonly natures=['Inventário','Alvará','Curatela','Procuração','Pareceres em geral'];
   readonly triageOptions:{code:TriageCategory;title:string;hint:string}[]=[
     {code:'PROCESSO_COM_BANCO',title:'Processo judicial com o Banco como parte',hint:'Verifique a posição do Banco e o GCPJ.'},
@@ -237,11 +260,22 @@ export class BjnDemandNewComponent implements OnInit {
     {code:'OFICIO_SEM_BANCO',title:'Ofício judicial sem o Banco como parte',hint:'Atendimento operacional.'},
     {code:'OUTRAS',title:'Nenhuma das opções anteriores',hint:'Continuar para cadastro e triagem da equipe.'},
   ];
+  readonly departmentSelected=signal(false);
   readonly triageCategory=signal<TriageCategory|null>(null);
   readonly triageResult=signal<TriageDecision|null>(null);
   readonly triageError=signal('');readonly triaging=signal(false);readonly triageComplete=signal(false);
   bankRole='';gcpj='';
-  form:DemandInput={requesting_department:'',consult_area:'',service_nature:'',title:'',description:'',involved:[],triage_type:'',triage_proof:'',branch:'',requester_email:'',client_name:'',client_document:''};
+  form:DemandInput={requesting_department:'',consulted_department:'',consult_area:'',service_nature:'',title:'',description:'',involved:[],triage_type:'',triage_proof:'',branch:'',requester_email:'',client_name:'',client_document:''};
+  /** Direciona apenas o jurídico ao roteiro que já existe neste módulo. */
+  confirmDepartment():void {
+    if(this.form.consulted_department==='4040 - Jurídico' && this.configuration()?.department_options.includes(this.form.consulted_department)){
+      this.departmentSelected.set(true);
+    }
+  }
+  changeDepartment():void {
+    this.departmentSelected.set(false);this.triageComplete.set(false);this.triageResult.set(null);
+    this.triageCategory.set(null);this.form.triage_type='';this.form.triage_proof='';
+  }
   chooseCategory(value:TriageCategory):void{this.triageCategory.set(value);this.triageResult.set(null);this.triageError.set('');this.bankRole='';this.gcpj='';}
   backToTriage():void {this.triageComplete.set(false);this.triageResult.set(null);this.form.triage_type='';this.form.triage_proof='';}
   async validateTriage():Promise<void>{
@@ -331,7 +365,7 @@ export class BjnDemandNewComponent implements OnInit {
   validationIssues():ValidationIssue[] {
     const issues:ValidationIssue[]=[];
     const fields:[string,string,string,number][]=[
-      ['dept','Departamento Solicitante',this.form.requesting_department,2],
+      ['dept','Solicitante',this.form.requesting_department,2],
       ['area','Área de consulta',this.form.consult_area,2],
       ['nature','Natureza do serviço',this.form.service_nature,2],
       ['title','Título da demanda',this.form.title,5],
@@ -346,6 +380,10 @@ export class BjnDemandNewComponent implements OnInit {
         issues.push({fieldId,message:`${label}: informe pelo menos ${minLength} caracteres.`});
       }
     }
+    if(!this.configuration()?.department_options.includes(this.form.requesting_department))
+      issues.push({fieldId:'dept',message:'Selecione um solicitante cadastrado no CSV.'});
+    if(this.form.consulted_department!=='4040 - Jurídico')
+      issues.push({fieldId:'consulted-dept',message:'Selecione 4040 - Jurídico para acessar este fluxo.'});
     if(!this.natures.includes(this.form.service_nature))issues.push({fieldId:'nature',message:'Selecione uma das cinco naturezas disponíveis.'});
     if(this.form.service_nature && this.form.service_nature!=='Pareceres em geral' && !this.files().length)issues.push({fieldId:'demand-upload',message:'Esta natureza exige pelo menos um documento anexo.'});
     if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.form.requester_email.trim()))issues.push({fieldId:'requester-email',message:'Informe um e-mail válido.'});

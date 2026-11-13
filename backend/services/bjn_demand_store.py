@@ -52,6 +52,7 @@ class DemandCreate(Contract):
     """Dados de abertura fornecidos pelo demandante, sem permissão para escolher advogado/status."""
 
     requesting_department: str = Field(min_length=2, max_length=120, validation_alias=AliasChoices("requesting_department", "legal_department"))
+    consulted_department: str = Field(default="", max_length=120)
     consult_area: str = Field(min_length=2, max_length=120)
     service_nature: str = Field(min_length=2, max_length=120)
     title: str = Field(min_length=5, max_length=180)
@@ -60,7 +61,7 @@ class DemandCreate(Contract):
     # Nova jornada: campos opcionais no contrato para permitir leitura de dados históricos.
     triage_type: str = ""
     triage_proof: str = Field(default="", max_length=100)
-    branch: str = Field(default="", max_length=40)
+    branch: str = Field(default="", max_length=120)
     requester_email: str = Field(default="", max_length=250)
     client_name: str = Field(default="", max_length=180)
     client_document: str = Field(default="", max_length=14)
@@ -221,6 +222,10 @@ class DemandStore:
             if "requesting_department" not in columns:
                 db.execute("ALTER TABLE bjn_demands ADD COLUMN requesting_department TEXT")
                 db.execute("UPDATE bjn_demands SET requesting_department=legal_department")
+            # O campo é adicionado sem perda de protocolos legados.
+            context_columns = {row[1] for row in db.execute("PRAGMA table_info(bjn_demand_context)")}
+            if "consulted_department" not in context_columns:
+                db.execute("ALTER TABLE bjn_demand_context ADD COLUMN consulted_department TEXT NOT NULL DEFAULT ''")
             db.execute("""CREATE TABLE IF NOT EXISTS bjn_document_suggestions (
                 demand_id TEXT PRIMARY KEY REFERENCES bjn_demands(id) ON DELETE CASCADE,
                 nature TEXT NOT NULL, suggestion_text TEXT NOT NULL, prompt_hash TEXT NOT NULL,
@@ -271,8 +276,11 @@ class DemandStore:
                 conditions.append("requester_id = ?")
                 params.append(actor.user_id)
         if branch.strip():
-            conditions.append("id IN (SELECT demand_id FROM bjn_demand_context WHERE branch = ?)")
-            params.append(branch.strip()[:40])
+            # Pesquisa parcial pelo número ou nome, sem restringir a escolha da lista.
+            # Escapamos curingas SQL para evitar resultados inesperados.
+            escaped = branch.strip()[:120].replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+            conditions.append("id IN (SELECT demand_id FROM bjn_demand_context WHERE branch LIKE ? ESCAPE '\\')")
+            params.append(f"%{escaped}%")
         if registered_email.strip():
             conditions.append("(requester_id LIKE ? OR requester_name LIKE ?)")
             filter_value = f"%{registered_email.strip()[:120]}%"
@@ -361,7 +369,7 @@ class DemandStore:
                 "documents_analyzed": suggestion["document_count"], "warnings": json.loads(suggestion["warnings_json"]),
                 "kind": "SUGESTAO_IA_NAO_VALIDADA", "created_at": suggestion["created_at"]} if suggestion else None)
             base["ai_guidance"] = ({"resumo": guidance["resumo"], "orientacao": guidance["orientacao"], "passos_sugeridos": json.loads(guidance["passos_json"]), "encaminhamento": guidance["encaminhamento"], "created_at": guidance["created_at"]} if guidance else None)
-            context = db.execute("SELECT triage_type,branch,requester_email,client_name,document_mask,competence,destination_area FROM bjn_demand_context WHERE demand_id=?", (demand_id,)).fetchone()
+            context = db.execute("SELECT triage_type,branch,requester_email,client_name,document_mask,competence,destination_area,consulted_department FROM bjn_demand_context WHERE demand_id=?", (demand_id,)).fetchone()
             base["registration"] = dict(context) if context else None
             opinion = db.execute("SELECT draft_text,final_text,published_at,reviewer_id,draft_at,version FROM bjn_opinions WHERE demand_id=?", (demand_id,)).fetchone()
             base["opinion"] = dict(opinion) if opinion else None
@@ -404,9 +412,11 @@ class DemandStore:
                     digits = re.sub(r"\D", "", data.client_document)
                     hashed = hmac.new(self.document_key, digits.encode("ascii"), hashlib.sha256).hexdigest()
                     masked = "***.***.***-" + digits[-2:]
-                    db.execute("INSERT INTO bjn_demand_context VALUES (?,?,?,?,?,?,?,?,?)", (
+                    db.execute("""INSERT INTO bjn_demand_context
+                        (demand_id,triage_type,branch,requester_email,client_name,document_hmac,document_mask,competence,destination_area,consulted_department)
+                        VALUES (?,?,?,?,?,?,?,?,?,?)""", (
                         demand_id, data.triage_type, data.branch.strip(), data.requester_email.strip().lower(),
-                        data.client_name.strip(), hashed, masked, "PENDENTE" if initial_status == "TRIAGEM_ADMINISTRATIVA" else "DIRETO", "",
+                        data.client_name.strip(), hashed, masked, "PENDENTE" if initial_status == "TRIAGEM_ADMINISTRATIVA" else "DIRETO", "", data.consulted_department,
                     ))
                 for row in data.involved:
                     db.execute("INSERT INTO bjn_involved (demand_id,type,name,document,period) VALUES (?,?,?,?,?)", (
@@ -674,6 +684,14 @@ class DemandStore:
         """Persiste versão preliminar; nunca torna visível o rascunho ao demandante."""
         self.demand_for_opinion(demand_id, actor)
         with self._connect() as db:
+            # Revalidação dentro da transação: a chamada à IA pode demorar,
+            # e o estado pode ter mudado enquanto o modelo gerava a resposta.
+            current = self._require(db, demand_id, actor)
+            if current["status"] not in {"EM_ANALISE", "PARECER_EM_REVISAO"}:
+                raise ServiceError("Demanda fora da etapa de elaboração.", 409, code="OPINION_STATE_INVALID")
+            existing = db.execute("SELECT draft_text FROM bjn_opinions WHERE demand_id=?", (demand_id,)).fetchone()
+            if existing and existing["draft_text"]:
+                return self.get_demand(demand_id, actor)
             now = utc_now()
             db.execute("""INSERT INTO bjn_opinions(demand_id,draft_text,prompt_hash,draft_at,version)
                 VALUES (?,?,?,?,1) ON CONFLICT(demand_id) DO UPDATE SET

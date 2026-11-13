@@ -1,3 +1,19 @@
+## 2026-11-12 — BJN: seletores pesquisáveis e alinhamento dos filtros
+
+- Retirado o texto explicativo do campo de agência no filtro avançado.
+- Criado seletor pesquisável compartilhado para departamento consultado, Solicitante e Agência no cadastro; agência na consulta utiliza a mesma experiência.
+- Incluída pesquisa por código/nome sem sensibilidade a acentos, seleção por teclado/mouse e lista limitada para catálogos grandes.
+- Reorganizada a grade responsiva dos filtros, sem alterar APIs, regras de permissão ou cadastros corporativos.
+- Adicionados testes automatizados e roteiro de homologação em `docs/BJN_FILTROS_SELETORES_PESQUISAVEIS_2026-11-12.md`.
+
+## 2026-11-13 — BJN Demandas: catálogos e parecer automático
+
+- Novo seletor inicial de departamento consultado, com roteamento do 4040 ao fluxo jurídico existente.
+- Campo Solicitante passa a ser preenchido por CSV de departamentos.
+- Filtro de agência com pesquisa parcial e sugestões de CSV com número e nome.
+- Rascunho de parecer preparado automaticamente ao abrir a demanda como advogado responsável, sem publicação automática e sem sobrescrever rascunho anterior.
+- Migração aditiva, testes e manual de operação/homologação.
+
 ## 30/10/2026 — Correção de instalação Angular
 
 - Adicionado `npm run setup` para instalar Angular com dependências de desenvolvimento e fallback **somente** para o defeito `edgesOut` do npm 10.

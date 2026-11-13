@@ -12,7 +12,7 @@ test('rotas de demandas não substituem as rotas de minutas e AI Ready',()=>{
 });
 test('cadastro valida campos, permite envolvidos e mantém anexos com a demanda',()=>{
   const view=file('src/app/bjn/demands/demand-new.component.ts');
-  for(const text of ['Departamento Solicitante','Área de consulta','Natureza do serviço','Descrição da consulta','Envolvidos','Anexos','Resumo da demanda','this.api.create']) assert.ok(view.includes(text),text);
+  for(const text of ['Solicitante','Área de consulta','Natureza do serviço','Descrição da consulta','Envolvidos','Anexos','Resumo da demanda','this.api.create']) assert.ok(view.includes(text),text);
 });
 test('acompanhamento exibe responsável, histórico, visualizador e novos documentos',()=>{
   const view=file('src/app/bjn/demands/demand-detail.component.ts');

@@ -6,8 +6,9 @@ import {RouterLink} from '@angular/router';
 import {firstValueFrom} from 'rxjs';
 import {BjnDemandApiService,DemandConfiguration,DemandSummary} from '../../core/bjn-demand-api.service';
 import {demandStatusLabels,friendlyApiError,readableDate,selectableStatuses} from './demand-ui';
+import {BjnSearchableSelectComponent} from './searchable-select.component';
 
-@Component({selector:'app-bjn-demand-list',standalone:true,imports:[CommonModule,FormsModule,RouterLink],template:`
+@Component({selector:'app-bjn-demand-list',standalone:true,imports:[CommonModule,FormsModule,RouterLink,BjnSearchableSelectComponent],template:`
 <main class="demand-shell demand-management-page">
   <nav class="demand-crumb" aria-label="Navegação"><a routerLink="/bjn">BJN</a><span aria-hidden="true">/</span><strong>Demandas</strong></nav>
   <header class="demand-heading demand-management-header">
@@ -83,8 +84,12 @@ import {demandStatusLabels,friendlyApiError,readableDate,selectableStatuses} fro
             <input maxlength="120" [(ngModel)]="lawyer" list="bjn-lawyer-options" placeholder="Nome ou e-mail" />
             <datalist id="bjn-lawyer-options">@for(option of configuration()?.lawyer_options||[];track option.email){<option [value]="option.name">{{option.email}}</option>}</datalist>
           </label>
-          <label>Agência <input maxlength="40" [(ngModel)]="branch" placeholder="Agência" /></label>
-          <label>Solicitante <input maxlength="120" [(ngModel)]="registeredEmail" placeholder="Nome ou e-mail" /></label>
+          <div class="bjn-filter-field"><label for="bjn-agency-options">Agência</label>
+            <app-bjn-searchable-select inputId="bjn-agency-options" ariaLabel="Filtrar por agência"
+              [options]="configuration()?.agency_options || []" [value]="branch" (valueChange)="branch=$event"
+              [allowCustomValue]="true" placeholder="Código ou nome da agência" />
+          </div>
+          <label>Usuário solicitante <input maxlength="120" [(ngModel)]="registeredEmail" placeholder="Nome ou e-mail" /></label>
           <label>CPF do cliente <input maxlength="14" inputmode="numeric" [(ngModel)]="clientCPF" placeholder="Busca protegida" /></label>
           <div class="demand-filter-actions"><button type="button" class="primary" (click)="load()" [disabled]="busy()">Aplicar filtros</button><button type="button" (click)="clearFilters()" [disabled]="busy()">Limpar tudo</button></div>
         </div>

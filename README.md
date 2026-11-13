@@ -36,6 +36,16 @@ O comando `setup` instala as dependências de desenvolvimento, incluindo `@angul
 Se a instalação continuar falhando, consulte o log local do npm e execute `npm config get registry`, `node --version` e `npm --version`. Confirme que a URL do registry é aprovada e acessível; não divulgue tokens. Uma atualização do npm pode contornar o defeito, mas só deve ocorrer com autorização de infraestrutura e de acordo com as versões homologadas. Nunca execute `npm start` após uma instalação que terminou com erro.
 
 
+## BJN Demandas — atualização de 13/11/2026
+
+- **Parecer automático:** ao abrir uma demanda atribuída no perfil advogado, o rascunho é iniciado pelo `text_generator` sem o botão de preparação. Nenhuma resposta é publicada sem revisão humana. A ausência da IA não impede parecer manual.
+- **Solicitante:** agora é uma lista suspensa alimentada pelo arquivo CSV de departamentos; o nome do campo não inclui mais “Departamento”.
+- **Departamento consultado:** aparece como primeira tela de Nova demanda. A escolha **4040 - Jurídico** encaminha à triagem atual, com as opções de ofícios e intimações. Os demais departamentos aguardam configuração de encaminhamento.
+- **Agência bancária:** a pesquisa aceita partes do número ou nome, e o autocomplete utiliza um CSV de duas colunas.
+- **Catálogos:** `data/cadastros/departamentos.csv` inclui a opção 4040 fornecida na especificação. `data/cadastros/agencias.csv` contém somente o cabeçalho; a lista real deve ser preenchida pelo responsável autorizado. Para usar CSVs externos, configure `BJN_DEPARTMENTS_CSV` e `BJN_AGENCIES_CSV` no ambiente.
+
+Documentação: `docs/BJN_CADASTROS_DEPARTAMENTOS_AGENCIAS_PARECER_AUTOMATICO.md`.
+
 ## Gestão de demandas BJN — melhorias de novembro de 2026
 
 - O filtro **Assunto / natureza** combina-se com status, datas e advogado na lista de demandas.

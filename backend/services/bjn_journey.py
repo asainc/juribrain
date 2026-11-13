@@ -68,7 +68,7 @@ def validate_journey_fields(data, attachments: int) -> None:
         raise ServiceError("Conclua a triagem inicial antes do cadastro.", 422, code="TRIAGE_REQUIRED")
     if data.service_nature not in NATURES:
         raise ServiceError("Selecione uma das cinco naturezas previstas.", 422, code="INVALID_NATURE")
-    if not 2 <= len(data.branch.strip()) <= 40:
+    if not 2 <= len(data.branch.strip()) <= 120:
         raise ServiceError("Informe a agência responsável.", 422, code="BRANCH_REQUIRED")
     if not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", data.requester_email.strip()):
         raise ServiceError("Informe o e-mail do demandante.", 422, code="EMAIL_REQUIRED")

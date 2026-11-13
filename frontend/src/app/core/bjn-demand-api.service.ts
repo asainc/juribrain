@@ -20,6 +20,7 @@ export type DemandStatus = 'RECEBIDA' | 'EM_TRIAGEM' | 'EM_ANALISE' | 'AGUARDAND
 export type InvolvedPerson = {type:string; name:string; document:string; period:string};
 export type DemandInput = {
   requesting_department:string;
+  consulted_department:string;
   consult_area:string;
   service_nature:string;
   title:string;
@@ -29,7 +30,7 @@ export type DemandInput = {
 };
 export type TriageCategory = 'PROCESSO_COM_BANCO'|'OFICIO_DELEGACIA'|'INTIMACAO_DELEGACIA'|'OFICIO_SEM_BANCO'|'OUTRAS';
 export type TriageDecision = {category:TriageCategory;label:string;destination:string;requires_registration:boolean;external_action_performed:boolean;notice:string;proof?:string};
-export type DemandRegistration = {triage_type:string;triage_proof:string;branch:string;requester_email:string;client_name:string;document_mask:string;competence:string;destination_area:string};
+export type DemandRegistration = {consulted_department:string;triage_type:string;triage_proof:string;branch:string;requester_email:string;client_name:string;document_mask:string;competence:string;destination_area:string};
 export type DemandOpinion = {draft_text:string;final_text:string;published_at:string|null;reviewer_id:string|null;draft_at:string|null;version:number};
 export type DemandSummary = {
   id:string; title:string; consult_area:string; service_nature:string;
@@ -54,7 +55,7 @@ export type DemandDetail = DemandSummary & {
 export type DemandConfiguration = {
   actor:{name:string;role:string;email:string}; allowed_lawyers:string[];lawyer_options:LawyerOption[];ai_available:boolean;
   max_file_size_mb:number; max_files:number; accepted_formats:string[];
-  available_natures:string[];opinion_ai_available:boolean;demo_session_available:boolean;
+  available_natures:string[];department_options:string[];agency_options:string[];opinion_ai_available:boolean;demo_session_available:boolean;
   ai_configuration?:{code:string;message:string};
 };
 

@@ -76,3 +76,18 @@
 .demand-management-page .demand-search-nature{flex:0 1 210px}
 @media(max-width:900px){.demand-management-page .demand-search-nature{flex:1 1 190px}}
 @media(max-width:620px){.demand-management-page .demand-search-nature{flex:1 0 100%}}
+
+/* Alinhamento consistente dos filtros: controles da mesma altura e grid responsivo. */
+.demand-management-page .demand-search-primary{display:grid;grid-template-columns:minmax(180px,1.5fr) minmax(145px,.8fr) minmax(160px,.9fr) auto auto;gap:12px;align-items:end}
+.demand-management-page .demand-search-input-group,.demand-management-page .demand-search-status,.demand-management-page .demand-search-nature{flex:initial;width:100%;min-width:0}
+.demand-management-page .demand-search-submit,.demand-management-page .demand-filter-trigger{height:43px;align-self:end}
+.demand-management-page .bjn-filters-extended{align-items:start}
+.demand-management-page .bjn-filters-extended>label,.demand-management-page .bjn-filters-extended>.bjn-filter-field{display:grid;grid-template-rows:auto 43px;gap:7px;min-width:0;align-content:start}
+.demand-management-page .bjn-filters-extended>.bjn-filter-field>label{font-size:.72rem;font-weight:700;color:#435765;display:block}
+.demand-management-page .bjn-filters-extended input{height:43px;min-height:43px}
+.demand-management-page .bjn-filters-extended .bjn-combobox-input{height:43px}
+.demand-management-page .bjn-filters-extended .demand-filter-actions{padding-top:2px}
+@media(max-width:1320px){.demand-management-page .demand-search-primary{grid-template-columns:minmax(170px,1.2fr) minmax(150px,1fr) minmax(160px,1fr)}.demand-management-page .demand-search-submit,.demand-management-page .demand-filter-trigger{min-width:160px}}
+@media(max-width:850px){.demand-management-page .demand-search-primary{grid-template-columns:repeat(2,minmax(0,1fr))}.demand-management-page .demand-search-input-group:first-child{grid-column:1/-1}.demand-management-page .demand-search-submit,.demand-management-page .demand-filter-trigger{width:100%;min-width:0}}
+@media(max-width:620px){.demand-management-page .demand-search-primary{grid-template-columns:minmax(0,1fr)}.demand-management-page .demand-search-input-group:first-child{grid-column:auto}.demand-management-page .demand-search-submit,.demand-management-page .demand-filter-trigger{width:100%}}
+.demand-management-page .bjn-filters-extended input.bjn-combobox-input{padding-right:43px}
