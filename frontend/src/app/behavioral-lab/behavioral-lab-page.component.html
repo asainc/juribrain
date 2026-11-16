@@ -234,6 +234,14 @@
             <button type="button" class="lab-full" (click)="setTab('intelligence')">Comparar alternativas ou rodar sensibilidade</button>
             <p class="lab-cost-caveat">{{sim.repetitions}} simulação(ões) independentes, {{sim.rounds}} rodadas por simulação. No modo IA cada reação exige uma chamada ao modelo; podem ocorrer custos e latência.</p>
             <button class="primary lab-full lab-run-button" type="button" (click)="start()" [disabled]="busy||!sim.environment_id||!sim.society_id||selectedSocietyAgents().length<1||selectedSocietyAgents().length*sim.rounds*sim.repetitions>(configuration?.max_model_calls||120)">▶ Executar simulação</button>
+            <div class="lab-execution-actions" role="group" aria-label="Controle de execução">
+              @if(selectedRun && ['QUEUED','RUNNING'].includes(selectedRun.status)){
+                <button type="button" class="lab-pause-button" (click)="pauseRun()" [disabled]="busy">⏸ Pausar experimento</button>
+              }@else if(selectedRun && ['PAUSED','PAUSE_REQUESTED'].includes(selectedRun.status)){
+                <button type="button" class="lab-resume-button" (click)="resumeRun()" [disabled]="busy">▶ Retomar experimento</button>
+              }
+              <button type="button" class="lab-reset-button" (click)="resetSimulationConfiguration()" [disabled]="busy" title="Restaurar parâmetros padrão sem excluir cadastros ou histórico">↺ Resetar configurações de simulação</button>
+            </div>
             @if(!environments.length||!societies.length){<button class="lab-full" type="button" (click)="setTab('ambientes')">Configurar ambiente e sociedade</button>}
           </div>
         </aside>
@@ -274,15 +282,22 @@
             <div class="lab-stage-bottom"><div class="lab-progress-label"><strong>{{selectedRun?'Simulação '+selectedRepetition+' · Rodada '+selectedRound+' / '+selectedRun.configuration.rounds:'Aguardando simulação'}}</strong><span>{{selectedRun?.completed??0}} / {{selectedRun?.total??0}} reações</span></div>
               <div class="lab-progress"><span [style.width.%]="progress()"></span></div>
               @if(selectedRun){<div class="lab-replay-control"><button type="button" title="Rodada anterior" aria-label="Rodada anterior" (click)="previousReplay()">❮</button>
-                <button type="button" class="lab-play-button" (click)="togglePlayback()">{{playing?'Pausar':'▶ Replay'}}</button>
+                <button type="button" class="lab-play-button" (click)="togglePlayback()">{{playing?'⏸ Pausar replay':'▶ Replay'}}</button>
                 <label for="round-replay">Reproduzir evolução</label><input id="round-replay" type="range" min="1" [max]="maxAvailableRound()" step="1" [ngModel]="selectedRound" (ngModelChange)="setRound($event)"><span>{{selectedRound}}/{{maxAvailableRound()}}</span>
                 <button type="button" title="Próxima rodada" aria-label="Próxima rodada" (click)="nextReplay()">❯</button>
                 @if(selectedRun.configuration.repetitions>1){<select class="lab-repetition-select" aria-label="Selecionar simulação" [ngModel]="selectedRepetition" (ngModelChange)="setRepetition($event)">
                   @for(rep of selectedRun.result?.repetitions||[];track rep.index){<option [ngValue]="rep.index">Sim. {{rep.index}}</option>}
                   @if(!selectedRun.result){@for(rep of availableRepetitions();track rep){<option [ngValue]="rep">Sim. {{rep}}</option>}}
                 </select>}
-                @if(['QUEUED','RUNNING'].includes(selectedRun.status)&&!followLive){<button type="button" (click)="followExecution()">Seguir ao vivo</button>}
-                @if(['QUEUED','RUNNING'].includes(selectedRun.status)){<button type="button" (click)="cancel()">Cancelar</button>}
+                @if(isRunActive()&&!followLive){<button type="button" (click)="followExecution()">Seguir ao vivo</button>}
+                @if(isRunActive()){
+                  @if(['QUEUED','RUNNING'].includes(selectedRun.status)){
+                    <button type="button" (click)="pauseRun()" [disabled]="busy">⏸ Pausar</button>
+                  }@else if(['PAUSED','PAUSE_REQUESTED'].includes(selectedRun.status)){
+                    <button type="button" (click)="resumeRun()" [disabled]="busy">▶ Retomar</button>
+                  }
+                  <button type="button" (click)="cancel()" [disabled]="busy">Cancelar</button>
+                }
               </div>}
             </div>
           </div>
@@ -303,7 +318,7 @@
           </div>
           @if(selectedAgentId){<label class="lab-chat-agent-filter"><input type="checkbox" [(ngModel)]="filterSelectedAgent"> Somente {{messageTo(selectedAgentId)}}
             <button type="button" (click)="selectedAgentId='';filterSelectedAgent=false" title="Limpar seleção">×</button></label>}
-          <div class="lab-chat-feed" role="log" aria-live="off">
+          <div class="lab-chat-feed" role="log" aria-live="off" aria-label="Histórico de mensagens e acontecimentos">
             @for(event of feedEvents();track event.sequence){
               @if(event.event_type==='REACTION'){
                 <button type="button" class="lab-chat-message lab-chat-reaction" (click)="inspectEvent(event)" [class.active]="selectedConversationSequence===event.sequence">

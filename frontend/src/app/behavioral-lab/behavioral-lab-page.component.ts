@@ -54,9 +54,14 @@ export class BehavioralLabPageComponent implements OnInit, OnDestroy {
   characteristicKey='';characteristicValue='';variableKey='';variableValue='';
   eventDraft:EnvironmentChange={round:2,name:'',description:'',impact:0,variable_updates:{}};
   eventKey='';eventValue='';
-  sim:SimulationConfiguration={environment_id:'',society_id:'',mode:'demo',rounds:3,repetitions:1,seed:42,
-    temperature:0.2,uncertainty:0.2,social_pressure:0.55,shock_probability:0.15,shock_intensity:0.35,
-    network_density:0.45,max_tokens_per_reaction:420,memory_window:4};
+  sim:SimulationConfiguration=this.defaultSimulationConfiguration();
+  // A configuração original é mantida em um único método para evitar
+  // divergência entre a abertura da tela e o botão de restaurar.
+  private defaultSimulationConfiguration():SimulationConfiguration {
+    return {environment_id:'',society_id:'',mode:'demo',rounds:3,repetitions:1,seed:42,
+      temperature:0.2,uncertainty:0.2,social_pressure:0.55,shock_probability:0.15,shock_intensity:0.35,
+      network_density:0.45,max_tokens_per_reaction:420,memory_window:4};
+  }
   readonly kinds:{value:EntityType;label:string}[]=[
     {value:'CLIENTE',label:'Cliente'}, {value:'PESSOA',label:'Pessoa'}, {value:'EMPRESA',label:'Empresa'},
     {value:'GOVERNO',label:'Entidade pública'}, {value:'AGENTE_IA',label:'Agente de IA'},
@@ -93,7 +98,7 @@ export class BehavioralLabPageComponent implements OnInit, OnDestroy {
   }
   private saved(message:string):void {this.notice=message;this.error='';this.busy=false;this.refresh();this.cdr.markForCheck();}
   private poll():void {
-    if(!this.selectedRun||!['QUEUED','RUNNING'].includes(this.selectedRun.status)||this.pollBusy)return;
+    if(!this.selectedRun||!['QUEUED','RUNNING','PAUSE_REQUESTED','PAUSED'].includes(this.selectedRun.status)||this.pollBusy)return;
     this.pollBusy=true;
     this.subscriptions.add(this.api.run(this.selectedRun.id).subscribe({next:run=>{
       const last=this.selectedRun?.status;
@@ -101,7 +106,7 @@ export class BehavioralLabPageComponent implements OnInit, OnDestroy {
       if(this.followLive){this.selectedRepetition=this.maxAvailableRepetition();this.selectedRound=this.maxAvailableRound();}
       else if(this.selectedRound>this.maxAvailableRound())this.selectedRound=this.maxAvailableRound();
       this.pollBusy=false;this.cdr.markForCheck();
-      if(last!==run.status&&!['QUEUED','RUNNING'].includes(run.status))this.api.runs().subscribe(rows=>{this.runs=rows;this.cdr.markForCheck();});
+      if(last!==run.status&&!['QUEUED','RUNNING','PAUSE_REQUESTED','PAUSED'].includes(run.status))this.api.runs().subscribe(rows=>{this.runs=rows;this.cdr.markForCheck();});
     },error:err=>{this.pollBusy=false;this.showError(err);}}));
   }
   setTab(tab:Tab):void{this.tab=tab;this.error='';}
@@ -239,6 +244,41 @@ export class BehavioralLabPageComponent implements OnInit, OnDestroy {
   }
 
   clearActiveRun():void{this.selectedRun=null;this.selectedRepetition=1;this.selectedRound=1;this.selectedAgentId='';this.playing=false;this.followLive=false;}
+  resetSimulationConfiguration():void {
+    // O reset afeta apenas os campos de configuração e visualização locais.
+    // Não apaga agentes, cenários, histórico ou um worker em execução.
+    if(!confirm('Restaurar os parâmetros de simulação aos valores padrão? Agentes, cenários e histórico serão preservados.'))return;
+    const defaults=this.defaultSimulationConfiguration();
+    this.sim={...defaults,
+      environment_id:this.environments[0]?.id||'',society_id:this.societies[0]?.id||'',
+      mode:this.configuration?.demo_available?'demo':'bridge'};
+    this.showAdvanced=false;this.feedFilter='all';this.filterSelectedAgent=false;
+    this.selectedAgentId='';this.selectedConversationSequence=0;
+    this.followLive=this.isRunActive();this.playing=false;
+    this.selectedRepetition=this.followLive?this.maxAvailableRepetition():1;
+    this.selectedRound=this.followLive?this.maxAvailableRound():1;
+    // Preserve a execução selecionada se estiver ativa; seus parâmetros são
+    // imutáveis no snapshot persistido, independentemente do formulário.
+    if(!this.selectedRun||!['QUEUED','RUNNING','PAUSE_REQUESTED','PAUSED'].includes(this.selectedRun.status))this.selectedRun=null;
+    this.error='';this.notice='Parâmetros de simulação restaurados. Agentes, cenários e execuções existentes não foram alterados.';
+  }
+  isRunActive():boolean{return !!this.selectedRun&&['QUEUED','RUNNING','PAUSE_REQUESTED','PAUSED'].includes(this.selectedRun.status);}
+  pauseRun():void {
+    if(!this.selectedRun||!['QUEUED','RUNNING'].includes(this.selectedRun.status)||this.busy)return;
+    this.busy=true;this.api.pause(this.selectedRun.id).subscribe({next:()=>{
+      this.busy=false;this.selectedRun={...this.selectedRun!,status:'PAUSE_REQUESTED',pause_requested:true};
+      this.notice='Pausa solicitada. A chamada atual à IA, se houver, será concluída antes de parar.';
+      this.cdr.markForCheck();this.poll();
+    },error:err=>this.showError(err)});
+  }
+  resumeRun():void {
+    if(!this.selectedRun||!['PAUSED','PAUSE_REQUESTED'].includes(this.selectedRun.status)||this.busy)return;
+    this.busy=true;this.api.resume(this.selectedRun.id).subscribe({next:()=>{
+      this.busy=false;this.selectedRun={...this.selectedRun!,status:'RUNNING',pause_requested:false};
+      this.notice='Simulação retomada com os eventos e a memória preservados.';
+      this.cdr.markForCheck();this.poll();
+    },error:err=>this.showError(err)});
+  }
   viewRepetition(index:number):void{this.tab='simulacoes';this.setRepetition(index);}
   start():void{
     this.error='';this.notice='';
@@ -265,9 +305,9 @@ export class BehavioralLabPageComponent implements OnInit, OnDestroy {
     },error:err=>this.showError(err)}));
   }
   cancel():void{if(!this.selectedRun)return;this.api.cancel(this.selectedRun.id).subscribe({next:()=>{this.notice='Cancelamento solicitado.';this.cdr.markForCheck();},error:err=>this.showError(err)});}
-  openRun(id:string):void{this.api.run(id).subscribe({next:run=>{this.selectedRun=run;this.driftResult=null;this.api.calibrations(id).subscribe({next:rows=>{this.calibrations=rows;this.cdr.markForCheck();},error:()=>{this.calibrations=[];}});this.selectedRepetition=this.maxAvailableRepetition();this.selectedRound=this.maxAvailableRound();this.followLive=['QUEUED','RUNNING'].includes(run.status);this.playing=false;this.selectedAgentId='';this.error='';this.cdr.markForCheck();},error:err=>this.showError(err)});}
+  openRun(id:string):void{this.api.run(id).subscribe({next:run=>{this.selectedRun=run;this.driftResult=null;this.api.calibrations(id).subscribe({next:rows=>{this.calibrations=rows;this.cdr.markForCheck();},error:()=>{this.calibrations=[];}});this.selectedRepetition=this.maxAvailableRepetition();this.selectedRound=this.maxAvailableRound();this.followLive=['QUEUED','RUNNING','PAUSE_REQUESTED','PAUSED'].includes(run.status);this.playing=false;this.selectedAgentId='';this.error='';this.cdr.markForCheck();},error:err=>this.showError(err)});}
   openResult(id:string):void{this.openRun(id);this.tab='resultados';}
-  showRunStatus(status:string):string{return ({QUEUED:'Na fila',RUNNING:'Executando',COMPLETED:'Concluída',FAILED:'Falhou',CANCELLED:'Cancelada',INTERRUPTED:'Interrompida'} as Record<string,string>)[status]||status;}
+  showRunStatus(status:string):string{return ({QUEUED:'Na fila',RUNNING:'Executando',PAUSE_REQUESTED:'Pausa solicitada',PAUSED:'Pausada',COMPLETED:'Concluída',FAILED:'Falhou',CANCELLED:'Cancelada',INTERRUPTED:'Interrompida'} as Record<string,string>)[status]||status;}
   progress():number{return this.selectedRun&&this.selectedRun.total?Math.round(100*this.selectedRun.completed/this.selectedRun.total):0;}
   maxAvailableRepetition():number{
     return Math.max(1,...(this.selectedRun?.events||[]).filter(e=>e.event_type==='NETWORK').map(e=>Number(e.payload['repetition']||1)));

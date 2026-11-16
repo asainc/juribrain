@@ -72,8 +72,14 @@ class LabRepository:
                     FOREIGN KEY(run_id) REFERENCES lab_runs(id)
                 );
             """)
-            # Após reinício, não inventamos continuidade de tarefas em memória.
-            db.execute("UPDATE lab_runs SET status = 'INTERRUPTED', error_code = 'SERVER_RESTART', updated_at = ? WHERE status = 'RUNNING'", (utc_now(),))
+            # Migração idempotente: bancos existentes não perdem histórico ou resultados.
+            columns = {item["name"] for item in db.execute("PRAGMA table_info(lab_runs)")}
+            if "pause_requested" not in columns:
+                db.execute("ALTER TABLE lab_runs ADD COLUMN pause_requested INTEGER NOT NULL DEFAULT 0")
+            # Workers são locais ao processo. Reiniciar o servidor interrompe inclusive
+            # uma simulação pausada; não afirmamos que um worker inexistente possa retomar.
+            db.execute("UPDATE lab_runs SET status = 'INTERRUPTED', error_code = 'SERVER_RESTART', "
+                       "pause_requested = 0, updated_at = ? WHERE status IN ('RUNNING','PAUSE_REQUESTED','PAUSED')", (utc_now(),))
             db.execute("UPDATE lab_experiments SET status = 'INTERRUPTED', updated_at = ? WHERE status = 'RUNNING'", (utc_now(),))
 
     @contextmanager
@@ -172,7 +178,7 @@ class LabRepository:
         now = utc_now()
         run_id = uuid4().hex
         with self._lock, self._db() as db:
-            active = db.execute("SELECT COUNT(*) AS amount FROM lab_runs WHERE status IN ('QUEUED','RUNNING')").fetchone()["amount"]
+            active = db.execute("SELECT COUNT(*) AS amount FROM lab_runs WHERE status IN ('QUEUED','RUNNING','PAUSE_REQUESTED','PAUSED')").fetchone()["amount"]
             if active >= 40:
                 raise ServiceError("Fila do Behavior atingiu 40 execuções. Conclua ou cancele uma antes de iniciar outra.", 409, code="LAB_CAPACITY_REACHED")
             db.execute("INSERT INTO lab_runs (id,status,mode,configuration,snapshot,total,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?)",
@@ -190,6 +196,7 @@ class LabRepository:
             result["snapshot"] = json.loads(result["snapshot"])
             result["result"] = json.loads(result["result"]) if result["result"] else None
             result["cancel_requested"] = bool(result["cancel_requested"])
+            result["pause_requested"] = bool(result["pause_requested"])
             if include_events:
                 result["events"] = self._events(db, run_id)
         return result
@@ -233,9 +240,53 @@ class LabRepository:
             row = db.execute("SELECT cancel_requested FROM lab_runs WHERE id = ?", (run_id,)).fetchone()
             return bool(row["cancel_requested"]) if row else True
 
-    def cancel(self, run_id: str) -> None:
+    def execution_control(self, run_id: str) -> tuple[bool, bool]:
+        """Lê os sinais persistentes para os checkpoints entre reações."""
         with self._lock, self._db() as db:
-            result = db.execute("UPDATE lab_runs SET cancel_requested=1 WHERE id=? AND status IN ('QUEUED','RUNNING')", (run_id,))
+            row = db.execute("SELECT cancel_requested, pause_requested FROM lab_runs WHERE id=?", (run_id,)).fetchone()
+        # Um worker órfão encerra em segurança em vez de seguir sem registro.
+        return (bool(row["cancel_requested"]), bool(row["pause_requested"])) if row else (True, False)
+
+    def pause(self, run_id: str) -> None:
+        """Solicita pausa cooperativa, sem fingir interromper chamadas externas em andamento."""
+        with self._lock, self._db() as db:
+            result = db.execute(
+                "UPDATE lab_runs SET pause_requested=1, status='PAUSE_REQUESTED', updated_at=? "
+                "WHERE id=? AND status IN ('QUEUED','RUNNING') AND cancel_requested=0",
+                (utc_now(), run_id),
+            )
+            if result.rowcount == 0:
+                raise ServiceError("A simulação não está ativa ou já recebeu pedido de pausa.", 409, code="LAB_PAUSE_INVALID_STATE")
+
+    def mark_paused(self, run_id: str) -> None:
+        """Confirma pausa apenas após o worker atingir um checkpoint seguro."""
+        with self._lock, self._db() as db:
+            db.execute("UPDATE lab_runs SET status='PAUSED', updated_at=? "
+                       "WHERE id=? AND pause_requested=1 AND cancel_requested=0 "
+                       "AND status IN ('QUEUED','RUNNING','PAUSE_REQUESTED')",
+                       (utc_now(), run_id))
+
+    def resume(self, run_id: str) -> None:
+        """Retoma a execução com seu snapshot, memória e trilha de eventos existentes."""
+        with self._lock, self._db() as db:
+            row = db.execute("SELECT completed FROM lab_runs WHERE id=?", (run_id,)).fetchone()
+            if row is None:
+                raise ServiceError("Simulação não encontrada.", 404, code="LAB_RUN_NOT_FOUND")
+            # Execuções pausadas antes do primeiro evento retornam à fila.
+            initial = db.execute("SELECT 1 FROM lab_events WHERE run_id=? LIMIT 1", (run_id,)).fetchone() is None
+            status = "QUEUED" if initial and row["completed"] == 0 else "RUNNING"
+            result = db.execute("UPDATE lab_runs SET pause_requested=0, status=?, updated_at=? "
+                                "WHERE id=? AND status IN ('PAUSED','PAUSE_REQUESTED') AND cancel_requested=0",
+                                (status, utc_now(), run_id))
+            if result.rowcount == 0:
+                raise ServiceError("A simulação não está pausada ou já foi cancelada.", 409, code="LAB_RESUME_INVALID_STATE")
+
+    def cancel(self, run_id: str) -> None:
+        """Solicita cancelamento mesmo se o worker estiver aguardando a retomada."""
+        with self._lock, self._db() as db:
+            result = db.execute("UPDATE lab_runs SET cancel_requested=1, pause_requested=0, updated_at=? "
+                                "WHERE id=? AND status IN ('QUEUED','RUNNING','PAUSE_REQUESTED','PAUSED')",
+                                (utc_now(), run_id))
             if result.rowcount == 0:
                 raise ServiceError("Esta simulação não está mais em execução.", 409, code="LAB_NOT_RUNNING")
 

@@ -183,3 +183,7 @@ O Behavior integra o menu e a página inicial, com rota `/behavior` e API `/api/
 **Uma configuração corporativa:** copie `.env.example` para `.env` **na raiz** e ajuste uma só vez `BRADESCO_IDENTIFICADOR`, `BRADESCO_SENHA`, `BRADESCO_QA_WORKFLOW_CODE` e parâmetros da Bridge. Todas as aplicações leem o mesmo arquivo e importam o único `gpt_bradesco.py` da raiz. Reinicie a API após alterar `.env`. Não versionar segredos.
 
 **Como incluir novos módulos:** utilize `python scripts/scaffold_application.py triagem --label "Triagem"` e consulte o tutorial completo [`docs/COMO_ADICIONAR_APLICACOES.md`](docs/COMO_ADICIONAR_APLICACOES.md). O registro de backend está em `applications/registry.py`; menu, home e aplicação ativa estão centralizados no frontend em `core/application-registry.ts`.
+
+### Atualização do Behavior (16/11/2026)
+
+Consulte [`docs/BEHAVIOR_CORRECAO_FEED_E_CONTROLE.md`](docs/BEHAVIOR_CORRECAO_FEED_E_CONTROLE.md) para os botões de pausar, retomar e resetar parâmetros, a correção das conversas e os testes de homologação.

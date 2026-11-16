@@ -12,6 +12,7 @@ import json
 import logging
 import random
 import re
+import time
 from copy import deepcopy
 from collections import defaultdict
 from pathlib import Path
@@ -303,6 +304,22 @@ class LabSimulator:
                        "interpretation": "Distribuição entre execuções sintéticas, não probabilidade populacional ou intervalo de confiança."})
         return result
 
+    def _await_permission(self, run_id: str) -> bool:
+        """Bloqueia entre reações; permite cancelar sem perder dados já persistidos.
+
+        O controle mora no SQLite, por isso funciona também quando o comando HTTP
+        de pausa/retomada ocorre em outro worker da API. A chamada de IA já
+        iniciada não é interrompida à força.
+        """
+        while True:
+            cancelled, pause_requested = self.repository.execution_control(run_id)
+            if cancelled:
+                return False
+            if not pause_requested:
+                return True
+            self.repository.mark_paused(run_id)
+            time.sleep(0.1)
+
     def execute(self, run_id: str) -> None:
         """Executa repetições isoladas; emite eventos incrementais para replay e auditoria."""
         try:
@@ -312,15 +329,21 @@ class LabSimulator:
             by_id = {agent["id"]: agent for agent in agents}
             environment = snapshot["environment"]
             repetitions_count = config.get("repetitions", 1)
-            if self.repository.is_cancel_requested(run_id):
+            if not self._await_permission(run_id):
                 self.repository.transition(run_id, "CANCELLED")
                 return
+            # A pausa pode ser solicitada enquanto a fila inicia. O controle
+            # persistente será conferido de novo antes de produzir eventos.
             self.repository.transition(run_id, "RUNNING")
             prompt_fingerprint = hashlib.sha256(PROMPT_PATH.read_bytes()).hexdigest() if config["mode"] == "bridge" else None
             results: list[dict] = []
             total_reactions = 0
             total_edges = 0
             for repetition in range(1, repetitions_count + 1):
+                if not self._await_permission(run_id):
+                    result = self.consolidate(results, agents, total_edges, config, environment, total_reactions)
+                    self.repository.transition(run_id, "CANCELLED", result=result)
+                    return
                 # Seeds distintas isolam os experimentos e tornam o modo demo reprodutível.
                 repetition_seed = (config["seed"] + repetition - 1) % (2**31)
                 rng = random.Random(repetition_seed)
@@ -342,6 +365,10 @@ class LabSimulator:
                 incoming_next: dict[str, list[dict]] = defaultdict(list)
                 reactions: list[dict] = []
                 for round_index in range(1, config["rounds"] + 1):
+                    if not self._await_permission(run_id):
+                        result = self.consolidate(results, agents, total_edges, config, environment, total_reactions)
+                        self.repository.transition(run_id, "CANCELLED", result=result)
+                        return
                     for recipient_id, messages in incoming_next.items():
                         memories[recipient_id].extend(messages)
                     incoming_next = defaultdict(list)
@@ -363,7 +390,7 @@ class LabSimulator:
                         self.repository.append(run_id, round_index, "SHOCK", shock)
                     current: dict[str, dict] = {}
                     for agent in agents:
-                        if self.repository.is_cancel_requested(run_id):
+                        if not self._await_permission(run_id):
                             result = self.consolidate(results, agents, total_edges, config, environment, total_reactions)
                             self.repository.transition(run_id, "CANCELLED", result=result)
                             return
@@ -381,6 +408,12 @@ class LabSimulator:
                             usage = {}
                             reaction = self._demo_reaction(agent, current_environment, config, previous.get(agent["id"]),
                                                            peers, shock, rng, scheduled)
+                        # Pausa solicitada durante uma chamada ao modelo: não
+                        # acrescentar reação/eventos até retomar.
+                        if not self._await_permission(run_id):
+                            result = self.consolidate(results, agents, total_edges, config, environment, total_reactions)
+                            self.repository.transition(run_id, "CANCELLED", result=result)
+                            return
                         metrics = self.evaluate_metrics(reaction, current_environment, config["mode"])
                         if not current_environment.get('enable_agent_actions') and reaction.environment_updates:
                             raise ValueError('Ações ambientais não foram habilitadas neste cenário.')
@@ -429,6 +462,11 @@ class LabSimulator:
                 results.append({"index": repetition, "seed": repetition_seed,
                                 "summary": self.summarize(agents, reactions, network, config, environment)})
                 self.repository.append(run_id, config["rounds"], "REPETITION_COMPLETED", {"repetition": repetition})
+            # Um pedido de pausa nos instantes finais ainda é respeitado.
+            if not self._await_permission(run_id):
+                result = self.consolidate(results, agents, total_edges, config, environment, total_reactions)
+                self.repository.transition(run_id, "CANCELLED", result=result)
+                return
             aggregate = self.consolidate(results, agents, total_edges, config, environment, total_reactions)
             # Tokens só podem ser informados como medidos quando a Bridge entrega
             # os contadores. Valores ausentes não são tratados como zero.

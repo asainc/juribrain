@@ -92,3 +92,30 @@ test('Limiares obrigatórios do cenário não acionam warning NG8102 no template
     assert.doesNotMatch(template,new RegExp(`run\\.snapshot\\.environment\\.${field}\\s*\\?\\?`),`NG8102 em ${field}`);
   }
 });
+
+test('Feed de conversas preserva altura de mensagens longas e permite rolagem independente',()=>{
+  // Evita regressão: flex-shrink comprimia centenas de mensagens ao mínimo e sobrepunha falas.
+  const css=read('src/behavioral-lab.scss');
+  const html=read('src/app/behavioral-lab/behavioral-lab-page.component.html');
+  assert.match(css,/\.lab-chat-feed>\.lab-chat-message[^\{]*\{[^}]*flex:0 0 auto/);
+  assert.match(css,/\.lab-chat-feed\{[^}]*overflow-y:auto/);
+  assert.match(css,/\.lab-chat-bubble\{[^}]*white-space:pre-wrap/);
+  assert.match(css,/\.lab-chat-event p\{[^}]*overflow-wrap:anywhere/);
+  assert.ok(html.includes('aria-label="Histórico de mensagens e acontecimentos"'));
+});
+
+test('Pausa, retomada e reset de parâmetros estão conectados ao backend',()=>{
+  // Pausar replay não equivale a suspender geração: exigimos endpoints e estado explícitos.
+  const view=read('src/app/behavioral-lab/behavioral-lab-page.component.html');
+  const service=read('src/app/behavioral-lab/behavioral-lab-api.service.ts');
+  const controller=read('src/app/behavioral-lab/behavioral-lab-page.component.ts');
+  for(const token of ['Pausar experimento','Retomar experimento','Resetar configurações de simulação','pauseRun()','resumeRun()','resetSimulationConfiguration()']){
+    assert.ok(view.includes(token),`Controle ausente: ${token}`);
+  }
+  assert.ok(view.includes('Pausar replay'), 'Replay deve ser distinguido da execução real');
+  assert.ok(service.includes('/pausar') && service.includes('/retomar'));
+  assert.ok(service.includes("'PAUSE_REQUESTED'|'PAUSED'"));
+  assert.ok(controller.includes('this.api.pause(') && controller.includes('this.api.resume('));
+  assert.ok(controller.includes('defaultSimulationConfiguration()'));
+  assert.ok(controller.includes('this.configuration?.demo_available'));
+});

@@ -34,9 +34,9 @@ export interface LabEvent {sequence:number;round:number;event_type:'NETWORK'|'SH
 export interface RoundSummary {round:number;mean_stance:number;support:number;undecided:number;resistance:number;agents:number}
 export interface RunResult {repetitions_completed?:number;repetitions_planned?:number;repetitions?:{index:number;seed:number;final:RoundSummary|null;rounds:RoundSummary[]}[];final_score_distribution?:{minimum:number;maximum:number;mean:number;standard_deviation:number};interpretation?:string;total_agents:number;total_reactions:number;network_edges:number;rounds:RoundSummary[];final:RoundSummary|null;mean_stance_change?:number;
   groups?:{name:string;mean_stance:number;agents:number}[];metrics?:MetricSummary[];snapshot_sha256?:string;engine_version?:string;configured_model?:string|null;actual_token_usage?:{input_tokens:number|null;cached_input_tokens:number|null;output_tokens:number|null};scenario?:string;method_note?:string;limitations?:string[];prompt_sha256?:string|null}
-export interface LabRun {id:string;status:'QUEUED'|'RUNNING'|'COMPLETED'|'FAILED'|'CANCELLED'|'INTERRUPTED';mode:'bridge'|'demo';
+export interface LabRun {id:string;status:'QUEUED'|'RUNNING'|'PAUSE_REQUESTED'|'PAUSED'|'COMPLETED'|'FAILED'|'CANCELLED'|'INTERRUPTED';mode:'bridge'|'demo';
   configuration:SimulationConfiguration;snapshot:{environment:Environment;society:Society;agents:SyntheticAgent[]};
-  completed:number;total:number;cancel_requested:boolean;created_at:string;updated_at:string;result:RunResult|null;
+  completed:number;total:number;cancel_requested:boolean;pause_requested:boolean;created_at:string;updated_at:string;result:RunResult|null;
   error_code:string|null;events?:LabEvent[]}
 
 @Injectable({providedIn:'root'})
@@ -73,6 +73,8 @@ export class BehavioralLabApiService {
   createExample(type:'comunidade'|'mercado'|'organizacao'='comunidade'){return this.http.post<{environment:Environment;society:Society;agents:SyntheticAgent[]}>(`${this.endpoint}/exemplos?tipo=${encodeURIComponent(type)}`,{});}
   start(config:SimulationConfiguration){return this.http.post<LabRun>(`${this.endpoint}/simulacoes`,config);}
   run(id:string){return this.http.get<LabRun>(`${this.endpoint}/simulacoes/${encodeURIComponent(id)}`);}
+  pause(id:string){return this.http.post<{status:'PAUSE_REQUESTED'}>(`${this.endpoint}/simulacoes/${encodeURIComponent(id)}/pausar`,{});}
+  resume(id:string){return this.http.post<{status:'RESUMED'}>(`${this.endpoint}/simulacoes/${encodeURIComponent(id)}/retomar`,{});}
   cancel(id:string){return this.http.post<{status:string}>(`${this.endpoint}/simulacoes/${encodeURIComponent(id)}/cancelar`,{});}
   exportAgents(){return this.http.get(`${this.endpoint}/agentes/exportar-csv`,{responseType:'blob'});}
   exportRun(id:string,format:'json'|'csv') {return this.http.get(`${this.endpoint}/simulacoes/${encodeURIComponent(id)}/exportar?format=${format}`,{responseType:'blob'});}

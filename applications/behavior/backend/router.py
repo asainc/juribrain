@@ -304,6 +304,20 @@ def run_events(run_id: str, request: Request, after: int = Query(default=0, ge=0
     return {"events": _repository(request).events(run_id, after)}
 
 
+@router.post("/simulacoes/{run_id}/pausar")
+def pause_run(run_id: str, request: Request) -> dict:
+    """Solicita pausa efetiva no próximo checkpoint, sem perder reações anteriores."""
+    _repository(request).pause(run_id)
+    return {"status": "PAUSE_REQUESTED"}
+
+
+@router.post("/simulacoes/{run_id}/retomar")
+def resume_run(run_id: str, request: Request) -> dict:
+    """Remove o bloqueio cooperativo e preserva o experimento original."""
+    _repository(request).resume(run_id)
+    return {"status": "RESUMED"}
+
+
 @router.post("/simulacoes/{run_id}/cancelar")
 def cancel_run(run_id: str, request: Request) -> dict:
     _repository(request).cancel(run_id)
@@ -421,7 +435,7 @@ async def stream_run(run_id: str, request: Request, after: int = Query(default=0
                 last = record['sequence']
                 yield f'id: {last}\nevent: lab-event\ndata: {json.dumps(record, ensure_ascii=False)}\n\n'
             status = repo.get_run(run_id)['status']
-            if status not in ('QUEUED', 'RUNNING') and not records:
+            if status not in ('QUEUED', 'RUNNING', 'PAUSE_REQUESTED', 'PAUSED') and not records:
                 yield f'event: completed\ndata: {json.dumps({"status": status})}\n\n'
                 return
             if not records:

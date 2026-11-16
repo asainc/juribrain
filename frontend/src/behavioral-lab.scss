@@ -231,3 +231,31 @@ app-behavioral-lab-page{display:block;min-width:0;background:#f3f5f7;color:#283c
 .lab-drift{padding-bottom:16px}.lab-drift-form{display:flex;gap:12px;align-items:end;padding:14px 20px}.lab-drift-form label{max-width:230px;font-size:.7rem;color:#657e8d}.lab-drift-form input{width:100%}.lab-drift>p,.lab-drift>small{display:block;margin:6px 20px;font-size:.7rem;color:#617784;line-height:1.6}
 
 .lab-toggle-action{display:flex!important;flex-direction:row!important;align-items:center!important;gap:8px;cursor:pointer;padding:10px;background:#f7f9fa;border:1px solid #e3eaf0;border-radius:7px;font-size:.7rem}.lab-toggle-action input{accent-color:#b83352}
+
+/* Behavior — correção do feed: eventos nunca podem encolher para a altura
+   mínima de um botão. A rolagem pertence à lista, não aos cartões. */
+.lab-conversation-panel{min-width:0;isolation:isolate}
+.lab-chat-header{flex:0 0 auto;min-width:0}
+.lab-chat-header>div{min-width:0;overflow-wrap:anywhere}
+.lab-chat-count{flex:0 0 auto}
+.lab-feed-switches,.lab-chat-agent-filter{flex:0 0 auto;min-width:0}
+.lab-chat-feed{flex:1 1 0;min-height:0;min-width:0;overflow-x:hidden;overflow-y:auto;align-items:stretch;overscroll-behavior:contain}
+.lab-chat-feed>.lab-chat-message,.lab-chat-feed>.lab-chat-event,.lab-chat-feed>.lab-chat-empty{flex:0 0 auto;min-width:0;max-width:100%;height:auto;box-sizing:border-box}
+.lab-chat-message{min-height:0;align-self:stretch;white-space:normal;overflow-wrap:anywhere;word-break:normal;line-height:normal}
+.lab-chat-content{flex:1 1 0;min-width:0;max-width:100%;display:flex;flex-direction:column;align-items:stretch}
+.lab-chat-meta{flex:0 0 auto;display:flex;flex-wrap:wrap;gap:3px 8px;min-width:0;max-width:100%;line-height:1.4}
+.lab-chat-meta>b{flex:1 1 110px;min-width:0;white-space:normal;overflow-wrap:anywhere}
+.lab-chat-meta>small{flex:0 1 auto;min-width:0;overflow-wrap:anywhere;line-height:1.4}
+.lab-chat-bubble{display:block;flex:0 0 auto;width:100%;max-width:100%;min-width:0;box-sizing:border-box;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;line-height:1.6}
+.lab-chat-foot{flex:0 0 auto;flex-wrap:wrap;min-width:0;overflow-wrap:anywhere}
+.lab-chat-foot>em{min-width:0;flex:1 1 90px}
+.lab-chat-avatar{flex-shrink:0}
+.lab-chat-event>div{flex:1 1 0;min-width:0;overflow-wrap:anywhere}
+.lab-chat-event p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6}
+.lab-chat-inspector{flex:0 1 auto;min-height:0;max-height:min(175px,30%);overflow:auto;min-width:0;overflow-wrap:anywhere}
+.lab-execution-actions{display:grid;gap:7px;grid-template-columns:1fr;min-width:0}
+.lab-execution-actions button{width:100%;min-width:0;white-space:normal;line-height:1.4;padding:9px 12px;font-size:.7rem}
+.lab-pause-button{color:#866018;background:#fffaf0;border:1px solid #e5d8b9}
+.lab-resume-button{color:#26644d;background:#edf8f2;border:1px solid #c7e5d4}
+.lab-reset-button{color:#536778;background:#f7f9fa;border:1px solid #dce4e9}
+@media(max-width:690px){.lab-chat-meta>small{text-align:left}.lab-execution-actions{grid-template-columns:1fr}}

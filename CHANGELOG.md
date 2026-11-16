@@ -1,4 +1,11 @@
-## 2026-11-16 — Behavior como quarta aplicação e configuração corporativa única
+## 2026-11-16 — Behavior: correção do feed e controle da execução
+
+- Corrigida a compressão vertical no painel "Conversas & acontecimentos": cartões preservam altura natural, com quebra de linhas e rolagem interna independente.
+- Adicionados pausa/retomada reais por checkpoints persistidos no SQLite (`PAUSE_REQUESTED` e `PAUSED`), com endpoints HTTP e cancelamento compatível.
+- Incluído botão para resetar apenas os parâmetros editáveis de simulação aos padrões, sem apagar configurações corporativas, cadastros ou histórico.
+- Migração idempotente da coluna `pause_requested`, interrupção segura de execução pausada em reinícios e novos testes de concorrência.
+- Validação: 126 testes backend e 71 verificações de frontend; compilação Angular e teste live da Bridge seguem pendentes de homologação.
+- Instruções, limitações e passo a passo: `docs/BEHAVIOR_CORRECAO_FEED_E_CONTROLE.md`.
 
 - Primeiro ZIP preservado como base, inclusive correções recentes de BJN.
 - Behavior 3 integrado em `applications/behavior/backend`, com frontend em `/behavior`, ciclo de vida próprio e API sob `/api/v3/laboratorio-comportamental`.
@@ -6,6 +13,8 @@
 - Único `.env` e `gpt_bradesco.py` na raiz; removidas cópias dos produtos Auditoria e Chatbot.
 - Adicionado tutorial de extensão e modelo de decisões arquiteturais.
 - Pendências de validação: ambiente Bridge corporativo real, políticas de acesso e homologação jurídico/compliance; responsável técnico a definir pela equipe mantenedora.
+
+## 2026-11-16 — Behavior como quarta aplicação e configuração corporativa única
 
 ## 2026-11-16 — BJN: catálogo de departamentos e seleção pesquisável
 
