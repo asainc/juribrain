@@ -13,5 +13,6 @@ def test_settings_are_limited_to_document_and_ai_runtime() -> None:
         "bjn_database_path", "bjn_upload_directory", "bjn_allowed_lawyers", "bjn_lawyer_names", "bjn_demo_lawyers_enabled",
         "bjn_document_hash_key", "bjn_notification_smtp_host", "bjn_notification_smtp_port",
         "bjn_notification_sender", "bjn_notification_username", "bjn_notification_password",
+        "behavioral_lab_database_path", "behavioral_lab_demo_enabled", "behavioral_lab_max_calls",
     }
     assert fields == expected

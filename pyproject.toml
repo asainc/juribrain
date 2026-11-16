@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "ecossistema-juridico"
 version = "1.0.0"
-description = "Ecossistema jurídico integrado: BJN, Auditoria de Pagamentos e Chatbot."
+description = "Ecossistema jurídico integrado: BJN, Auditoria de Pagamentos, Chatbot e Behavior."
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [

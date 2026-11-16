@@ -40,7 +40,7 @@ def test_answer_question_uses_agente_informacional_without_rewriting(monkeypatch
     )
     settings = Settings(
         bradesco_text_model="deployment-teste",
-        bradesco_qa_workflow_code="CD_WRFL_QA_778_LEITURA_SENTENCA_PIAUI_AAJR_SYNC",
+        bradesco_qa_workflow_code="WORKFLOW_TESTE_FICTICIO",
     )
     client = BradescoBridgeClient(settings)
     monkeypatch.setattr(client, "_module", module)
@@ -50,7 +50,7 @@ def test_answer_question_uses_agente_informacional_without_rewriting(monkeypatch
 
     assert result == "Resposta corporativa\ncom duas linhas."
     assert calls == [{
-        "workflow_code": "CD_WRFL_QA_778_LEITURA_SENTENCA_PIAUI_AAJR_SYNC",
+        "workflow_code": "WORKFLOW_TESTE_FICTICIO",
         "question": question,
         "async_mode": False,
     }]

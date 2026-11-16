@@ -33,6 +33,12 @@ export function friendlyApiError(error:unknown):string {
     const details=cause?.error?.fields?.map(item=>item.message).filter((message):message is string=>Boolean(message)).slice(0,3);
     return details?.length ? `${serverMessage || 'Revise os campos informados.'} ${details.join(' ')}` : (serverMessage || 'Existem dados inválidos. Revise o preenchimento dos campos.');
   }
-  if(status && status>=500) return `O servidor não conseguiu concluir o cadastro.${requestId ? ' Identificador: '+requestId : ''} Contate o suporte se persistir.`;
+  if(status && status>=500){
+    // Apresenta apenas mensagens públicas e controladas da API, sem detalhes internos.
+    const knownCodes=['DATABASE_BUSY','DATABASE_UNAVAILABLE','UPLOAD_STORAGE_UNAVAILABLE','DIRECTORY_UNAVAILABLE','DIRECTORY_INVALID'];
+    const friendlyMessage=knownCodes.includes(code||'') && serverMessage
+      ? serverMessage : 'O servidor não conseguiu concluir a solicitação.';
+    return `${friendlyMessage}${requestId ? ' Identificador: '+requestId : ''} Contate o suporte se persistir.`;
+  }
   return serverMessage || 'Não foi possível concluir a solicitação. Tente novamente ou contate o suporte.';
 }

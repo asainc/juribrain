@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Literal
 
 from pydantic import Field, SecretStr, ValidationError, field_validator, model_validator
-from starlette.config import Config
+from backend.central_environment import read_environment_file
 
 from applications.chatbot.backend.contracts.base import Contract
 
@@ -40,7 +40,7 @@ class Settings(Contract):
     bradesco_text_url: str = ""
     bradesco_identity_url: str = ""
     bradesco_qa_url: str = ""
-    bradesco_qa_workflow_code: str = Field(default="CD_WRFL_QA_778_LEITURA_SENTENCA_PIAUI_AAJR_SYNC", min_length=1, max_length=180)
+    bradesco_qa_workflow_code: str = Field(default="", max_length=180)
     bradesco_timeout_seconds: int = Field(default=600, ge=10, le=1800)
     bradesco_text_model: str = Field(default="", max_length=100)
     bradesco_text_temperature: float = Field(default=0.2, ge=0, le=2)
@@ -73,10 +73,8 @@ class Settings(Contract):
 
 def load_settings() -> Settings:
     """Carrega JSON, .env e variáveis de ambiente, nessa ordem de precedência."""
-    env_path = Path(os.environ.get("CHATBOT_ENV_FILE", ROOT / ".env"))
-    if "CHATBOT_ENV_FILE" in os.environ and not env_path.is_file():
-        raise ValueError("CHATBOT_ENV_FILE aponta para um arquivo inexistente.")
-    file_values = Config(env_path if env_path.is_file() else None, environ={}, encoding="utf-8-sig").file_values
+    # Mesmo arquivo .env da raiz compartilhado por todos os produtos.
+    file_values = read_environment_file()
     variables = {**file_values, **os.environ}
     path = Path(variables.get("CHATBOT_CONFIG_PATH", ROOT / "config/app.settings.json"))
     if "CHATBOT_CONFIG_PATH" in variables and not path.is_file():

@@ -1,0 +1,5 @@
+name,entity_type,group,goal,communication_style,initial_stance,influence,susceptibility,prioridade,contexto
+Morador fictício,PESSOA,Comunidade,Encontrar transporte acessível na cidade,curioso,60,0.4,0.6,acessibilidade,bairro inventado
+Comércio fictício,EMPRESA,Mercado,Manter movimento constante de consumidores,objetivo,53,0.65,0.45,continuidade,mercado hipotético
+Organização fictícia,ORGANIZACAO,Sociedade civil,Promover diálogo e transparência entre grupos,formal,55,0.7,0.4,participação,cenário inventado
+Sistema virtual simulado,AGENTE_IA,Tecnologia,Informar regras e comunicar mudanças com clareza,analítico,70,0.5,0.5,clareza,sistema não real

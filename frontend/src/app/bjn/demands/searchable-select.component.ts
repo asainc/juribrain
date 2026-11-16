@@ -26,7 +26,7 @@ export function normalizeDirectorySearch(text:string):string {
           role="combobox" aria-autocomplete="list" aria-haspopup="listbox"
           [attr.aria-controls]="inputId+'-options'" [attr.aria-expanded]="isOpen"
           [attr.aria-required]="required" [attr.aria-activedescendant]="isOpen && activeIndex>=0 && matches.length?optionId(activeIndex):null"
-          autocomplete="off" (focus)="openMenu()" (input)="onInput($event)"
+          autocomplete="off" (focus)="openMenu()" (click)="openMenu()" (input)="onInput($event)"
           (keydown)="onKeydown($event)" />
         <button type="button" class="bjn-combobox-toggle" [disabled]="disabled"
           [attr.aria-label]="isOpen?'Fechar opções':'Abrir opções'" [attr.aria-expanded]="isOpen"
@@ -36,9 +36,9 @@ export function normalizeDirectorySearch(text:string):string {
         <div class="bjn-combobox-popover" [id]="inputId+'-options'" role="listbox"
           [attr.aria-label]="ariaLabel || 'Opções disponíveis'">
           @for(option of matches;track option;let index=$index){
-            <div class="bjn-combobox-option" role="option" [id]="optionId(index)"
+            <button type="button" class="bjn-combobox-option" role="option" [id]="optionId(index)"
               [attr.aria-selected]="option===value" [class.active]="index===activeIndex"
-              (pointerdown)="selectOption(option);$event.preventDefault()" (click)="selectOption(option)">{{option}}</div>
+              (pointerdown)="$event.preventDefault()" (click)="selectOption(option)">{{option}}</button>
           } @empty {
             <div class="bjn-combobox-empty" role="status">{{options.length?'Nenhum resultado. Refine sua busca.':allowCustomValue?'Nenhuma opção cadastrada. Digite o valor desejado.':'Nenhum registro disponível no cadastro.'}}</div>
           }

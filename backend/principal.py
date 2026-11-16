@@ -5,7 +5,7 @@ import json
 import logging
 import os
 import secrets
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, AsyncExitStack
 from time import perf_counter
 from uuid import uuid4
 
@@ -29,8 +29,7 @@ from backend.services.bjn_opinion import OpinionAIService
 from backend.services.bjn_document_opinion import BjnDocumentOpinionService
 from backend.services.bjn_nature_classifier import BjnNatureClassifier
 from backend.version import API_CONTRACT_VERSION, API_PREFIX, APP_VERSION
-from applications.auditoria.backend.principal import create_app as create_audit_app
-from applications.chatbot.backend.principal import create_app as create_chatbot_app
+from applications.registry import mounted_applications, api_extensions
 
 
 class Health(Contract):
@@ -45,7 +44,7 @@ class StructuredFormatter(logging.Formatter):
 
     def format(self, record: logging.LogRecord) -> str:
         payload = {"level": record.levelname, "event": record.getMessage()}
-        for key in ("request_id", "status_code", "duration_ms", "error_type"):
+        for key in ("request_id", "status_code", "duration_ms", "error_type", "stage", "error_code"):
             if hasattr(record, key):
                 payload[key] = getattr(record, key)
         return json.dumps(payload, ensure_ascii=False)
@@ -61,18 +60,26 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     # Cada subaplicação mantém sua própria configuração, persistência e ciclo de vida.
     # Um mount ASGI não inicia automaticamente o lifespan de outra FastAPI.
-    audit_app = create_audit_app()
-    chatbot_app = create_chatbot_app()
+    # O registro preserva o isolamento da auditoria/chatbot e permite extensões
+    # sem espalhar imports, mounts e controle de ciclo de vida pelo núcleo.
+    mounted = tuple((spec, spec.factory()) for spec in mounted_applications())
+    extensions = api_extensions(configuration, bridge)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
-        async with audit_app.router.lifespan_context(audit_app):
-            async with chatbot_app.router.lifespan_context(chatbot_app):
-                yield
+        # Um mount ASGI não executa automaticamente o lifespan da subaplicação.
+        async with AsyncExitStack() as stack:
+            for _, child_app in mounted:
+                await stack.enter_async_context(child_app.router.lifespan_context(child_app))
+            for extension in extensions:
+                await stack.enter_async_context(extension.lifespan())
+            yield
 
     app = FastAPI(title="AI Ready - Assistente Processual Cível", version=APP_VERSION, lifespan=lifespan)
     app.state.settings = configuration
     app.state.bridge = bridge
+    for extension in extensions:
+        extension.attach(app)
     app.state.process_intelligence = process_intelligence
     app.state.chat_service = chat_service
     app.state.bjn_chat_service = ChatService(configuration, bridge)
@@ -133,7 +140,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         try:
             response = await call_next(request)
         except Exception as error:
-            logger.error("request_failed", extra={"request_id": request_id, "error_type": type(error).__name__})
+            logger.error("request_failed", extra={
+                "request_id": request_id,
+                "error_type": type(error).__name__,
+                "stage": getattr(request.state, "bjn_stage", "unspecified"),
+            })
             response = JSONResponse(
                 status_code=500,
                 content={
@@ -155,6 +166,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.exception_handler(ServiceError)
     async def service_error(request: Request, error: ServiceError):
+        # Falhas de serviço são rastreáveis pelo identificador sem registrar
+        # dados enviados, nomes de arquivos, SQL ou credenciais.
+        if error.status_code >= 500:
+            logger.warning("request_service_error", extra={
+                "request_id": getattr(request.state, "request_id", None),
+                "stage": getattr(request.state, "bjn_stage", "unspecified"),
+                "error_code": error.code,
+                "status_code": error.status_code,
+            })
         return JSONResponse(status_code=error.status_code, content=error.payload(getattr(request.state, "request_id", None)))
 
     @app.exception_handler(RequestValidationError)
@@ -183,10 +203,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     api.include_router(processes.router)
     api.include_router(bjn.router)
     api.include_router(bjn_demands.router)
+    for extension in extensions:
+        api.include_router(extension.router)
     app.include_router(api, prefix=API_PREFIX)
     # Caminhos separados permitem versões /api/v2 e /api/v3 no mesmo servidor.
-    app.mount("/services/auditoria", audit_app, name="auditoria")
-    app.mount("/services/chatbot", chatbot_app, name="chatbot")
+    for spec, child_app in mounted:
+        app.mount(spec.mount_path, child_app, name=spec.key)
     return app
 
 

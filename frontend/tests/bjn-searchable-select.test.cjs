@@ -88,3 +88,18 @@ test('seleção funcional filtra por nome sem acento e preserva busca parcial de
   assert.equal(agency.valueChange.values.at(-1),'4321');
   assert.equal(agency.inputText,'4321');
 });
+
+test('lista usa botões selecionáveis sem confirmação dupla ao clicar',()=>{
+  assert.match(component,/<button type="button" class="bjn-combobox-option" role="option"/);
+  assert.match(component,/\(pointerdown\)="\$event\.preventDefault\(\)" \(click\)="selectOption\(option\)"/);
+  assert.doesNotMatch(component,/\(pointerdown\)="selectOption\(option\)/);
+  assert.match(component,/\(click\)="openMenu\(\)"/);
+});
+
+test('cadastro permite recarregar os departamentos do CSV sem apagar campos válidos',()=>{
+  assert.match(registration,/refreshDirectoryOptions\(\)/);
+  assert.match(registration,/department_options:refreshed\.department_options/);
+  assert.match(registration,/this\.form\.requesting_department=''/);
+  assert.match(registration,/bjn-catalog-refresh/);
+  assert.match(registration,/departamento\(s\) disponível\(is\) no cadastro/);
+});

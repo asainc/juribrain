@@ -10,7 +10,7 @@ def test_agente_informacional_posts_expected_payload(monkeypatch) -> None:
 
     monkeypatch.setattr(gpt_bradesco, "_call", fake_call)
     payload = {
-        "workflow_code": "CD_WRFL_QA_778_LEITURA_SENTENCA_PIAUI_AAJR_SYNC",
+        "workflow_code": "WORKFLOW_TESTE_FICTICIO",
         "question": "pergunta teste",
         "async_mode": False,
     }

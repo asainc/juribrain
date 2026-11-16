@@ -7,7 +7,7 @@ from decimal import Decimal
 from pathlib import Path
 
 from pydantic import Field, SecretStr, ValidationError, field_validator, model_validator
-from starlette.config import Config
+from backend.central_environment import read_environment_file
 from typing import Literal
 from applications.auditoria.backend.models import Contract, InterestType
 from applications.auditoria.backend.calculation_policy import defaults_for_origin
@@ -97,10 +97,8 @@ class Settings(Contract):
 
 def load_settings() -> Settings:
     """Prioridade: ambiente > .env > JSON > padrões; segredos corporativos não são persistidos."""
-    env_path = Path(os.environ.get("AUDITORIA_ENV_FILE", ROOT / ".env"))
-    if "AUDITORIA_ENV_FILE" in os.environ and not env_path.is_file():
-        raise ValueError("AUDITORIA_ENV_FILE aponta para um arquivo inexistente.")
-    file_values = Config(env_path if env_path.is_file() else None, environ={}, encoding="utf-8-sig").file_values
+    # Mesmo arquivo .env da raiz compartilhado por todos os produtos.
+    file_values = read_environment_file()
     variables = {**file_values, **os.environ}
     path = Path(variables.get("AUDITORIA_CONFIG_PATH", ROOT / "config/app.settings.json"))
     if "AUDITORIA_CONFIG_PATH" in variables and not path.is_file():

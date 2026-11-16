@@ -426,6 +426,27 @@ class DemandStore:
                     target = self._insert_document(db, demand_id, actor, document, now)
                     moved.append(target)
                 self._event(db, demand_id, "CRIACAO", "Protocolo criado; triagem administrativa pendente." if initial_status == "TRIAGEM_ADMINISTRATIVA" else "Protocolo criado; fluxo direto para distribuição.", actor, now)
+        except (sqlite3.OperationalError, sqlite3.DatabaseError, OSError) as exc:
+            # O rollback do context manager preserva a integridade do cadastro.
+            # O cliente recebe apenas uma categoria técnica, nunca SQL/caminhos locais.
+            for path in moved:
+                path.unlink(missing_ok=True)
+            if isinstance(exc, sqlite3.OperationalError) and any(
+                text in str(exc).lower() for text in ("locked", "busy")
+            ):
+                raise ServiceError(
+                    "Banco de demandas temporariamente ocupado. Verifique se outro processo mantém a base aberta.",
+                    503, code="DATABASE_BUSY", retryable=True,
+                ) from exc
+            if isinstance(exc, OSError):
+                raise ServiceError(
+                    "Não foi possível gravar os documentos da demanda. Verifique as permissões do armazenamento.",
+                    503, code="UPLOAD_STORAGE_UNAVAILABLE",
+                ) from exc
+            raise ServiceError(
+                "Não foi possível salvar a demanda no banco local. Verifique a configuração e as migrações.",
+                503, code="DATABASE_UNAVAILABLE",
+            ) from exc
         except Exception:
             for path in moved:
                 path.unlink(missing_ok=True)
@@ -787,6 +808,13 @@ def save_upload(stream: BinaryIO, original_name: str, media_type: str, temp_dire
         if not found or found != media_type or Path(name).suffix.lower() not in extensions.get(found, set()):
             raise ServiceError("Formato inválido. Utilize PDF, PNG ou JPEG.", 415, code="UNSUPPORTED_MEDIA")
         return SavedDocument(name, found, size, digester.hexdigest(), tmp_path, category)
+    except OSError as exc:
+        if tmp_path is not None:
+            tmp_path.unlink(missing_ok=True)
+        raise ServiceError(
+            "Não foi possível receber o arquivo. Verifique as permissões e o espaço do diretório de uploads.",
+            503, code="UPLOAD_STORAGE_UNAVAILABLE",
+        ) from exc
     except Exception:
         if tmp_path is not None:
             tmp_path.unlink(missing_ok=True)

@@ -52,7 +52,9 @@ def departments() -> list[str]:
     if headings not in (["departamento"], ["codigo", "nome"], ["numero_departamento", "nome_departamento"]):
         raise ServiceError("Cabeçalho de departamentos inválido.", 503, code="DIRECTORY_INVALID")
     values = [row[0] if len(row) == 1 else f"{row[0]} - {row[1]}" for row in rows]
-    if any(not DEPARTMENT_PATTERN.fullmatch(value) for value in values) or len(values) != len(set(values)):
+    if (any(not DEPARTMENT_PATTERN.fullmatch(value) for value in values)
+            or len(values) != len(set(values))
+            or len({value[:4] for value in values}) != len(values)):
         raise ServiceError("Registros de departamentos inválidos ou duplicados.", 503, code="DIRECTORY_INVALID")
     return values
 

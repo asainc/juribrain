@@ -1,0 +1,474 @@
+<main class="lab-page">
+  <div class="lab-frame">
+    <section class="lab-hero" [class.lab-hero-compact]="tab==='simulacoes'">
+      <div class="lab-hero-copy">
+        <span class="eyebrow lab-kicker"><span class="lab-kicker-dot"></span> EXPERIMENTAÇÃO COM INTELIGÊNCIA ARTIFICIAL</span>
+        <h1>Behavior</h1>
+        <p>Projete qualquer cenário, crie agentes fictícios, altere o ambiente e acompanhe as interações e os comportamentos ao vivo.</p>
+        <div class="lab-hero-actions">
+          <button class="primary" type="button" (click)="setTab('simulacoes')">Iniciar experimento <span aria-hidden="true">↗</span></button>
+          <button type="button" (click)="setTab('agentes')">Gerenciar agentes</button><button type="button" (click)="setTab('intelligence')">Comparar cenários</button>
+          @if(configuration?.bridge_available){<button type="button" (click)="setTab('painel')">Criar mundo com IA</button>}
+          @if(configuration?.demo_available){<button type="button" class="quiet" (click)="createExample()" [disabled]="busy">+ Cenário de exemplo</button>}
+        </div>
+      </div>
+      <div class="lab-hero-art" aria-hidden="true">
+        <div class="lab-art-halo halo-a"></div><div class="lab-art-halo halo-b"></div>
+        <div class="lab-art-line line-a"></div><div class="lab-art-line line-b"></div><div class="lab-art-line line-c"></div><div class="lab-art-line line-d"></div>
+        <span class="lab-art-node n1">C</span><span class="lab-art-node n2">E</span><span class="lab-art-node n3">G</span>
+        <span class="lab-art-node n4">IA</span><span class="lab-art-node n5">P</span>
+        <div class="lab-art-caption"><small>SIMULAÇÃO MULTIAGENTE</small><strong>Comportamento em rede</strong></div>
+      </div>
+    </section>
+
+    <div class="lab-status-line">
+      <span class="lab-status-item"><span class="status-dot" [class.ok]="configuration?.bridge_available"></span> IA corporativa: {{configuration?.bridge_available?'configurada':'não configurada'}}</span>
+      <span class="lab-status-item"><span class="status-dot" [class.ok]="configuration?.demo_available"></span> Demonstração: {{configuration?.demo_available?'disponível':'desabilitada'}}</span>
+      <span class="lab-status-note">Hipóteses simuladas, não previsões verificadas sobre pessoas reais.</span>
+    </div>
+
+    <nav class="lab-tabs" aria-label="Áreas do Behavior">
+      @for(t of tabs;track t.key){
+        <button type="button" [class.active]="tab===t.key" (click)="setTab(t.key)"><span>{{t.number}}</span>{{t.label}}</button>
+      }
+    </nav>
+    @if(error){<div class="lab-alert error" role="alert">{{error}}<button type="button" (click)="error=''" aria-label="Fechar erro">×</button></div>}
+    @if(notice){<div class="lab-alert success" role="status">{{notice}}<button type="button" (click)="notice=''" aria-label="Fechar mensagem">×</button></div>}
+
+    @if(tab==='painel'){
+      <section class="lab-quickstart lab-panel" aria-label="Cenários rápidos">
+        <div class="lab-quickstart-copy"><span class="eyebrow">COMECE SEM CÓDIGO</span><h2>Que mundo você quer simular?</h2><p>Escolha um contexto inteiramente fictício, experimente o motor e depois personalize seus próprios agentes e variáveis.</p></div>
+        <div class="lab-quickstart-actions">
+          <select [(ngModel)]="sampleType" aria-label="Selecionar exemplo"><option value="comunidade">Mobilidade e comunidade</option><option value="mercado">Mercado e consumo</option><option value="organizacao">Mudança organizacional</option></select>
+          @if(configuration?.demo_available){<button type="button" class="primary" (click)="createExample()" [disabled]="busy">Criar mundo fictício</button>}
+          <button type="button" (click)="setTab('agentes')">Começar do zero</button>
+        </div>
+      </section>
+      <section class="lab-panel lab-generator" aria-label="Assistente de criação de cenário">
+        <div class="lab-generator-intro"><span class="eyebrow">CRIAÇÃO ASSISTIDA · OPCIONAL</span><h2>Descreva sua hipótese. A IA prepara o mundo.</h2>
+          <p>Explique em linguagem natural o que deseja testar. O assistente cria agentes fictícios distintos, ambiente, grupos e eventos editáveis. Você revisa tudo antes de executar.</p>
+          <small>Não informe nomes de clientes, documentos, dados pessoais ou informações internas sensíveis. A descrição será enviada ao modelo corporativo quando disponível.</small></div>
+        <form class="lab-generator-form" (ngSubmit)="generateScenario()">
+          <label>O que você deseja simular?
+            <textarea name="generator_description" rows="4" [(ngModel)]="generatorDescription" minlength="30" maxlength="1600" required
+              placeholder="Ex.: Uma comunidade fictícia precisa escolher entre duas opções de mobilidade; simule divergências, influência entre grupos e uma mudança no orçamento durante o teste."></textarea>
+          </label>
+          <div class="lab-generator-actions"><label>Quantidade de agentes
+              <input name="generator_count" type="number" min="2" max="10" step="1" [(ngModel)]="generatorCount" required></label>
+            <button type="submit" class="primary" [disabled]="busy||!configuration?.bridge_available||generatorDescription.trim().length<30">{{busy?'Gerando cenário...':'Gerar agentes e cenário com IA'}}</button>
+          </div>
+          @if(!configuration?.bridge_available){<p class="lab-info-small">IA corporativa não configurada. Você pode criar manualmente, importar CSV ou usar os exemplos locais.</p>}
+        </form>
+      </section>
+      <section class="lab-metrics" aria-label="Recursos disponíveis">
+        <div class="lab-metric"><span>PERFIS SINTÉTICOS</span><strong>{{agents.length | number:'2.0-0'}}</strong><small>Linhas na base de agentes</small></div>
+        <div class="lab-metric"><span>AMBIENTES</span><strong>{{environments.length | number:'2.0-0'}}</strong><small>Contextos de experimentação</small></div>
+        <div class="lab-metric"><span>SOCIEDADES</span><strong>{{societies.length | number:'2.0-0'}}</strong><small>Redes de interação configuradas</small></div>
+        <div class="lab-metric"><span>EXECUÇÕES</span><strong>{{runs.length | number:'2.0-0'}}</strong><small>Histórico das últimas simulações</small></div>
+      </section>
+      <div class="lab-heading-row"><div><span class="eyebrow">JORNADA DO EXPERIMENTO</span><h2>Studio → Observatory → Intelligence</h2></div></div>
+      <div class="lab-workflow">
+        <button type="button" (click)="setTab('agentes')"><span>01</span><strong>Agentes</strong><small>Importe uma tabela CSV ou crie perfis com atributos livres e objetivos individuais.</small></button>
+        <button type="button" (click)="setTab('ambientes')"><span>02</span><strong>Ambientes</strong><small>Descreva o cenário, a mudança que será testada e as variáveis externas.</small></button>
+        <button type="button" (click)="setTab('ambientes')"><span>03</span><strong>Sociedades</strong><small>Defina quais perfis participam e como formarão uma rede de influência.</small></button>
+        <button type="button" (click)="setTab('simulacoes')"><span>04</span><strong>Observe</strong><small>Parametrize pressão social, choques, incerteza, rodadas e temperatura.</small></button>
+        <button type="button" (click)="setTab('resultados')"><span>05</span><strong>Analise</strong><small>Reproduza as interações e exporte o histórico auditável em JSON ou CSV.</small></button>
+        <button type="button" (click)="setTab('intelligence')"><span>06</span><strong>Compare</strong><small>Experimentos A/B, sensibilidade e validação agregada, com semente comum.</small></button>
+      </div>
+      <div class="lab-panel lab-history-panel"><div class="panel-head"><div><span class="eyebrow">HISTÓRICO</span><h2>Últimas simulações</h2></div><button type="button" (click)="setTab('resultados')">Abrir resultados</button></div>
+        @if(runs.length){<div class="lab-scroll"><table class="lab-table"><thead><tr><th>Identificador</th><th>Modo</th><th>Status</th><th>Progresso</th><th>Ação</th></tr></thead><tbody>
+          @for(run of runs.slice(0,8);track run.id){<tr><td class="mono">{{run.id.slice(0,10)}}</td><td>{{run.mode==='bridge'?'IA corporativa':'Demonstração'}}</td><td><span class="lab-tag">{{showRunStatus(run.status)}}</span></td><td>{{run.completed}} / {{run.total}}</td><td><button type="button" (click)="openResult(run.id)">Explorar</button></td></tr>}
+        </tbody></table></div>}
+        @else{<p class="lab-empty">Nenhuma simulação registrada. Crie os perfis e execute seu primeiro cenário.</p>}
+      </div>
+    }
+
+    @if(tab==='agentes'){
+      <div class="lab-heading-row"><div><span class="eyebrow">BASE COMPORTAMENTAL</span><h2>Uma linha, um agente. Cada coluna, uma característica.</h2><p>O mesmo modelo atende pessoas, comunidades, empresas, governos hipotéticos, sistemas e outras entidades. Crie individualmente ou importe uma tabela.</p></div>
+        <div class="lab-toolbar"><label class="button lab-file-button" for="lab-csv">Importar CSV</label><input id="lab-csv" type="file" accept=".csv,text/csv" (change)="importAgents($event)" hidden><button type="button" (click)="downloadAgents()">Exportar tabela</button></div></div>
+      <div class="lab-two-column lab-agent-layout">
+        <div class="lab-panel lab-editor"><div class="panel-head"><div><span class="eyebrow">EDITOR DE PERFIL</span><h2>{{editAgentId?'Editar agente':'Novo agente sintético'}}</h2></div>@if(editAgentId){<button type="button" (click)="clearAgent()">Limpar</button>}</div>
+          <div class="lab-template-rail"><small>Preencher a partir de um perfil:</small><div>
+            <button type="button" (click)="loadAgentTemplate('pessoa')">Pessoa</button><button type="button" (click)="loadAgentTemplate('empresa')">Empresa</button>
+            <button type="button" (click)="loadAgentTemplate('instituicao')">Instituição</button><button type="button" (click)="loadAgentTemplate('digital')">Agente virtual</button>
+          </div></div>
+          <form (ngSubmit)="saveAgent()">
+            <div class="lab-form-grid"><label>Nome fictício<input name="name" [(ngModel)]="agentDraft.name" required minlength="2" maxlength="90" placeholder="Ex.: Morador interessado"></label>
+              <label>Tipo de entidade<select name="kind" [(ngModel)]="agentDraft.entity_type">@for(kind of kinds;track kind.value){<option [value]="kind.value">{{kind.label}}</option>}</select></label></div>
+            <label>Segmento ou grupo<input name="group" [(ngModel)]="agentDraft.group" maxlength="60" required placeholder="Ex.: Perfil conservador"></label>
+            <label>Objetivo e motivação<textarea name="goal" [(ngModel)]="agentDraft.goal" rows="3" required minlength="5" maxlength="450" placeholder="O que este agente deseja obter ou proteger?"></textarea></label>
+            <label>Estilo de comunicação<input name="style" [(ngModel)]="agentDraft.communication_style" required maxlength="120" placeholder="Ex.: formal, analítico, desconfiado"></label>
+            <div class="lab-form-grid three"><label>Posição inicial (0–100)<input name="stance" type="number" min="0" max="100" [(ngModel)]="agentDraft.initial_stance"></label>
+              <label>Influência (0–1)<input name="influence" type="number" min="0" max="1" step="0.05" [(ngModel)]="agentDraft.influence"></label>
+              <label>Suscetibilidade (0–1)<input name="susceptibility" type="number" min="0" max="1" step="0.05" [(ngModel)]="agentDraft.susceptibility"></label></div>
+            <div class="lab-subsection"><span class="eyebrow">COLUNAS PERSONALIZADAS</span><p>Ex.: canal_preferido, conhecimento_digital, prioridade, apetite_ao_risco.</p></div>
+            @for(key of characteristicKeys();track key){<div class="lab-chip-row"><span><b>{{key}}</b> · {{agentDraft.characteristics[key]}}</span><button type="button" (click)="removeCharacteristic(key)" aria-label="Remover característica">×</button></div>}
+            <div class="lab-add-row"><input aria-label="Nome da característica" [(ngModel)]="characteristicKey" name="ck" placeholder="Coluna"><input aria-label="Valor da característica" [(ngModel)]="characteristicValue" name="cv" placeholder="Valor"><button type="button" (click)="addCharacteristic()">Adicionar</button></div>
+            <button class="primary lab-full" type="submit" [disabled]="busy">{{editAgentId?'Atualizar agente':'Adicionar agente'}}</button>
+          </form></div>
+        <div class="lab-panel lab-agent-table"><div class="panel-head"><div><span class="eyebrow">PLANILHA DE PERFIS</span><h2>Agentes cadastrados <span class="lab-count">{{agents.length}}</span></h2></div><small>Até 24 colunas livres por perfil</small></div>
+          <div class="lab-scroll"><table class="lab-table"><thead><tr><th>Agente</th><th>Entidade</th><th>Grupo</th><th>Objetivo</th><th>Posição</th><th>Influência</th><th>Suscet.</th>@for(column of extraColumns();track column){<th>{{column}}</th>}<th>Ações</th></tr></thead><tbody>
+            @for(agent of agents;track agent.id){<tr><td><strong>{{agent.name}}</strong></td><td><span class="lab-tag">{{agent.entity_type}}</span></td><td>{{agent.group}}</td><td class="goal-cell" [title]="agent.goal">{{agent.goal}}</td><td>{{agent.initial_stance}}</td><td>{{agent.influence}}</td><td>{{agent.susceptibility}}</td>
+              @for(column of extraColumns();track column){<td>{{agent.characteristics[column]||'—'}}</td>}
+              <td class="lab-actions"><button type="button" (click)="editAgent(agent)">Editar</button><button type="button" (click)="duplicateAgent(agent)">Duplicar</button><button type="button" (click)="viewVersions('agents',agent.id,agent.name)">Versões</button><button type="button" class="danger-link" (click)="removeAgent(agent)">Excluir</button></td></tr>}
+          </tbody></table></div>
+          @if(!agents.length){<p class="lab-empty">Ainda não há agentes. Use o editor, importe CSV ou carregue o cenário fictício de exemplo.</p>}
+        </div>
+      </div>
+    }
+
+    @if(tab==='ambientes'){
+      <div class="lab-heading-row"><div><span class="eyebrow">DESENHO DO EXPERIMENTO</span><h2>Configure o mundo antes de colocar os agentes nele.</h2><p>Ambientes definem estímulos e contextos. Sociedades selecionam quem vai interagir.</p></div></div>
+      <div class="lab-two-column lab-config-layout">
+        <div class="lab-panel lab-editor"><div class="panel-head"><div><span class="eyebrow">01 · CONTEXTO</span><h2>{{editEnvironmentId?'Editar ambiente':'Criar ambiente'}}</h2></div>@if(editEnvironmentId){<button type="button" (click)="clearEnvironment()">Limpar</button>}</div>
+          <form (ngSubmit)="saveEnvironment()"><label>Nome do cenário<input name="env_name" [(ngModel)]="environmentDraft.name" required minlength="3" maxlength="90" placeholder="Ex.: Mudança de jornada digital"></label>
+            <label>Contexto e condições iniciais<textarea name="context" [(ngModel)]="environmentDraft.context" rows="4" required minlength="10" maxlength="2200" placeholder="Contexto institucional, restrições, recursos e eventos."></textarea></label>
+            <label>Decisão ou intervenção a testar<textarea name="decision" [(ngModel)]="environmentDraft.decision" rows="3" required minlength="10" maxlength="1600" placeholder="O que muda para os agentes?"></textarea></label>
+            <label>Comportamento-alvo a observar <span class="lab-label-hint">O que significa a escala de 0 a 100?</span><input name="target" [(ngModel)]="environmentDraft.target_behavior" required minlength="3" maxlength="160" placeholder="Ex.: interesse em experimentar uma nova solução"></label>
+            <div class="lab-form-grid"><label>Faixa intermediária começa em (1–98)<input type="number" name="low_threshold" [(ngModel)]="environmentDraft.low_threshold" min="1" max="98" required></label>
+              <label>Faixa alta começa em (2–100)<input type="number" name="high_threshold" [(ngModel)]="environmentDraft.high_threshold" [min]="environmentDraft.low_threshold+1" max="100" required></label></div>
+            <p class="lab-cost-caveat">Defina limiares crescentes. São categorias da simulação, não probabilidades reais.</p>
+            <div class="lab-form-grid three lab-measure-labels"><label>0–{{environmentDraft.low_threshold-1}} · Baixa<input name="low_label" [(ngModel)]="environmentDraft.low_label" required maxlength="45"></label>
+              <label>{{environmentDraft.low_threshold}}–{{environmentDraft.high_threshold-1}} · Intermediária<input name="middle_label" [(ngModel)]="environmentDraft.middle_label" required maxlength="45"></label>
+              <label>{{environmentDraft.high_threshold}}–100 · Alta<input name="high_label" [(ngModel)]="environmentDraft.high_label" required maxlength="45"></label></div>
+            <label>Critério de sucesso hipotético<input name="success" [(ngModel)]="environmentDraft.success_criterion" required minlength="5" maxlength="400" placeholder="Ex.: adesão voluntária e baixa resistência"></label>
+            <div class="lab-subsection"><span class="eyebrow">INDICADORES CONFIGURÁVEIS · SAÍDAS AGNÓSTICAS</span>
+              <p>Além da escala legada 0–100, defina o que importa no seu teste: valor, acordo, categoria, estratégia ou qualquer resultado mensurável. No modo demonstração as métricas são regras ilustrativas; na Bridge exigem resposta estruturada.</p></div>
+            @for(metric of environmentDraft.metrics;track metric.key){
+              <div class="lab-chip-row"><span><b>{{metric.label}}</b> · {{metric.key}} · {{metric.kind==='number'?'Numérico':metric.kind==='boolean'?'Sim/Não':'Categoria'}}
+                @if(metric.kind==='category'){<small>{{metric.categories.join(' / ')}}</small>}</span>
+                <button type="button" (click)="removeMetric(metric.key)" aria-label="Remover indicador">×</button></div>
+            }
+            <div class="lab-metric-editor">
+              <div class="lab-form-grid"><label>Identificador técnico<input name="metric_key" [(ngModel)]="metricDraft.key" maxlength="45" placeholder="ex.: preco_aceito"></label>
+                <label>Nome exibido<input name="metric_label" [(ngModel)]="metricDraft.label" maxlength="90" placeholder="Ex.: Preço aceito"></label></div>
+              <label>Tipo do indicador<select name="metric_kind" [(ngModel)]="metricDraft.kind"><option value="number">Número</option><option value="boolean">Sim/Não</option><option value="category">Categoria</option></select></label>
+              @if(metricDraft.kind==='number'){<div class="lab-form-grid"><label>Mínimo<input name="metric_min" type="number" [(ngModel)]="metricDraft.minimum"></label><label>Máximo<input name="metric_max" type="number" [(ngModel)]="metricDraft.maximum"></label></div>}
+              @if(metricDraft.kind==='category'){<label>Opções separadas por vírgula<input name="metric_categories" [(ngModel)]="metricCategories" placeholder="Aceita, Recusa, Negocia"></label>}
+              <label>Instrução sobre a métrica<input name="metric_description" [(ngModel)]="metricDraft.description" maxlength="300" placeholder="O que este indicador representa no cenário?"></label>
+              <button type="button" (click)="addMetric()" [disabled]="environmentDraft.metrics.length>=12">+ Adicionar indicador (máx. 12)</button>
+            </div>
+            <div class="lab-subsection"><span class="eyebrow">VARIÁVEIS DO AMBIENTE</span><p>Acrescente fatores observáveis a serem considerados pela IA.</p></div>
+            @for(key of variableKeys();track key){<div class="lab-chip-row"><span><b>{{key}}</b> · {{environmentDraft.variables[key]}}</span><button type="button" (click)="removeVariable(key)">×</button></div>}
+            <div class="lab-add-row"><input name="vk" [(ngModel)]="variableKey" aria-label="Nome da variável" placeholder="Variável"><input name="vv" [(ngModel)]="variableValue" aria-label="Valor da variável" placeholder="Valor"><button type="button" (click)="addVariable()">Adicionar</button></div>
+            <div class="lab-subsection"><span class="eyebrow">AÇÕES COM EFEITOS NO MUNDO FICTÍCIO</span>
+              <p>Permita que agentes alterem somente variáveis e valores explicitamente autorizados. Nenhuma ação acessa sistemas externos. O resultado é registrado e aparece na rodada seguinte.</p></div>
+            <label class="lab-toggle-action"><input type="checkbox" name="enable_agent_actions" [(ngModel)]="environmentDraft.enable_agent_actions"> Habilitar mudanças de ambiente produzidas por agentes</label>
+            @if(environmentDraft.enable_agent_actions){
+              @for(item of environmentDraft.allowed_agent_effects | keyvalue;track item.key){<div class="lab-chip-row"><span><b>{{item.key}}</b>: {{item.value.join(', ')}}</span><button type="button" (click)="removeAllowedEffect(item.key)">×</button></div>}
+              <div class="lab-add-row"><input name="action_key" [(ngModel)]="actionKey" placeholder="Variável já cadastrada" aria-label="Variável que agentes podem alterar">
+                <input name="action_options" [(ngModel)]="actionOptions" placeholder="Valores permitidos (separados por vírgula)" aria-label="Valores permitidos"><button type="button" (click)="addAllowedEffect()">Permitir</button></div>
+            }
+            <div class="lab-subsection"><span class="eyebrow">LINHA DO TEMPO DO MUNDO</span><p>Programe mudanças durante a simulação: notícia, crise, regra, recurso, clima ou qualquer evento fictício. O motor aplica o evento na rodada escolhida.</p></div>
+            @for(event of environmentDraft.events;track $index){<div class="lab-event-card"><div><strong>Rodada {{event.round}} · {{event.name}}</strong><small>Impacto ilustrativo: {{event.impact}} · {{event.description}}</small>
+              @for(item of event.variable_updates | keyvalue;track item.key){<small>{{item.key}} → {{item.value}}</small>}</div><button type="button" (click)="removeEnvironmentEvent($index)" aria-label="Excluir evento">×</button></div>}
+            <div class="lab-event-editor"><div class="lab-form-grid"><label>Rodada<input name="event_round" type="number" [(ngModel)]="eventDraft.round" min="1" max="6"></label><label>Intensidade (-1 a +1)<input name="event_impact" type="number" [(ngModel)]="eventDraft.impact" min="-1" max="1" step="0.1"></label></div>
+              <label>Nome da mudança<input name="event_name" [(ngModel)]="eventDraft.name" maxlength="90" placeholder="Ex.: Comunicado público"></label>
+              <label>Descrição do acontecimento<textarea name="event_description" [(ngModel)]="eventDraft.description" rows="2" maxlength="600" placeholder="O que muda no ambiente e por quê?"></textarea></label>
+              <div class="lab-add-row"><input name="event_key" [(ngModel)]="eventKey" placeholder="Variável alterada" aria-label="Variável alterada"><input name="event_value" [(ngModel)]="eventValue" placeholder="Novo valor" aria-label="Novo valor"><button type="button" (click)="addEventVariable()">+ Variável</button></div>
+              @for(item of eventDraft.variable_updates | keyvalue;track item.key){<span class="lab-event-update">{{item.key}} → {{item.value}}</span>}
+              <button type="button" (click)="addEnvironmentEvent()" [disabled]="environmentDraft.events.length>=12">+ Programar evento</button>
+            </div>
+            <button class="primary lab-full" type="submit" [disabled]="busy">Salvar ambiente</button>
+          </form>
+          <div class="lab-saved-items"><h3>Ambientes disponíveis</h3>
+            @for(env of environments;track env.id){<div class="lab-saved-row"><span><strong>{{env.name}}</strong><small>{{env.success_criterion}}</small></span><button type="button" (click)="editEnvironment(env)">Editar</button><button type="button" (click)="duplicateEnvironment(env)">Duplicar</button><button type="button" (click)="viewVersions('environments',env.id,env.name)">Versões</button><button type="button" class="danger-link" (click)="removeEnvironment(env)">×</button></div>}
+            @if(!environments.length){<small>Nenhum ambiente cadastrado.</small>}
+            @if(itemRevisions.length){<details open class="lab-revision-history"><summary>Versões de {{versionedName}}</summary>
+              @for(version of itemRevisions;track version.version){<p>v{{version.version}} · {{version.created_at | date:'short'}} · hash {{version.sha256.slice(0,12)}}</p>}</details>}
+          </div>
+        </div>
+        <div class="lab-panel lab-editor"><div class="panel-head"><div><span class="eyebrow">02 · COLETIVO</span><h2>{{editSocietyId?'Editar sociedade':'Construir sociedade'}}</h2></div>@if(editSocietyId){<button type="button" (click)="clearSociety()">Limpar</button>}</div>
+          <form (ngSubmit)="saveSociety()"><label>Nome da sociedade<input name="society_name" [(ngModel)]="societyDraft.name" required minlength="3" maxlength="90" placeholder="Ex.: Ecossistema de atendimento"></label>
+            <label>Descrição<input name="society_description" [(ngModel)]="societyDraft.description" maxlength="400"></label>
+            <div class="lab-subsection lab-flex"><div><span class="eyebrow">MEMBROS DA SOCIEDADE</span><p>Selecione de 1 a 30 agentes. Com um único agente, não há influência social.</p></div><button type="button" (click)="selectAllAgents()">Selecionar todos</button></div>
+            <div class="lab-member-list">
+              @for(agent of agents;track agent.id){<label class="lab-member"><input type="checkbox" [checked]="societyHas(agent.id)" (change)="toggleSocietyAgent(agent.id,$any($event.target).checked)"><span class="member-avatar">{{agent.name.slice(0,1)}}</span><span><strong>{{agent.name}}</strong><small>{{agent.group}} · {{agent.entity_type}}</small></span></label>}
+              @if(!agents.length){<div class="lab-empty">Cadastre agentes antes de formar uma sociedade.</div>}
+            </div>
+            <div class="lab-selection-count">{{societyDraft.agent_ids.length}} agente(s) selecionado(s)</div>
+            <button class="primary lab-full" type="submit" [disabled]="busy||societyDraft.agent_ids.length<1">Salvar sociedade</button>
+          </form>
+          <div class="lab-saved-items"><h3>Sociedades disponíveis</h3>
+            @for(society of societies;track society.id){<div class="lab-saved-row"><span><strong>{{society.name}}</strong><small>{{society.agent_ids.length}} agentes · {{society.description}}</small></span><button type="button" (click)="editSociety(society)">Editar</button><button type="button" class="danger-link" (click)="removeSociety(society)">×</button></div>}
+            @if(!societies.length){<small>Nenhuma sociedade formada.</small>}
+          </div>
+        </div>
+      </div>
+    }
+
+    @if(tab==='simulacoes'){
+      <div class="lab-heading-row lab-sim-heading"><div><span class="eyebrow">ESTÚDIO DE SIMULAÇÃO</span><h2>Um mundo vivo. Muitos resultados possíveis.</h2><p>Configure à esquerda, observe a rede no centro e acompanhe conversas e eventos à direita. A primeira rodada é independente; as seguintes consideram as mensagens da rede.</p></div>
+        <div class="lab-toolbar"><button type="button" (click)="setTab('agentes')">Editar agentes</button><button type="button" (click)="setTab('ambientes')">Editar cenário</button></div></div>
+      @if(!environments.length||!societies.length){<div class="lab-panel lab-quickstart lab-setup-prompt"><div class="lab-quickstart-copy"><span class="eyebrow">PRIMEIRA SIMULAÇÃO</span><h2>Crie um cenário fictício em um clique</h2><p>Depois personalize os agentes, o contexto e os eventos ou comece do zero.</p></div>
+        <div class="lab-quickstart-actions"><select [(ngModel)]="sampleType" aria-label="Modelo de cenário"><option value="comunidade">Cidade e comunidade</option><option value="mercado">Mercado e consumo</option><option value="organizacao">Organização e trabalho</option></select>
+          @if(configuration?.demo_available){<button type="button" class="primary" (click)="createExample()" [disabled]="busy">Criar cenário e agentes</button>}
+          <button type="button" (click)="setTab('ambientes')">Configuração manual</button></div></div>}
+      <div class="lab-context-ribbon"><span><b>CENÁRIO</b> {{currentEnvironment()?.name||'Não definido'}}</span>
+        <span><b>COMPORTAMENTO-ALVO</b> {{currentEnvironment()?.target_behavior||'Configure o indicador do experimento'}}</span>
+        <span><b>SOCIEDADE</b> {{selectedRun?.snapshot?.society?.name||selectedSocietyAgents().length+' agentes selecionados'}}</span></div>
+      <div class="lab-sim-layout">
+        <aside class="lab-panel lab-control-panel">
+          <div class="panel-head"><div><span class="eyebrow">01 · DEFINIR EXPERIMENTO</span><h2>Mesa de controle</h2></div><span class="lab-control-icon">⚙</span></div>
+          <div class="lab-panel-body">
+            <label>Ambiente<select [(ngModel)]="sim.environment_id" (ngModelChange)="clearActiveRun()" aria-label="Selecionar ambiente"><option value="">Selecione um ambiente</option>@for(env of environments;track env.id){<option [value]="env.id">{{env.name}}</option>}</select></label>
+            <label>Sociedade<select [(ngModel)]="sim.society_id" (ngModelChange)="clearActiveRun()" aria-label="Selecionar sociedade"><option value="">Selecione uma sociedade</option>@for(society of societies;track society.id){<option [value]="society.id">{{society.name}} · {{society.agent_ids.length}} perfis</option>}</select></label>
+            <label>Motor de execução<select [(ngModel)]="sim.mode" aria-label="Motor de execução"><option value="bridge" [disabled]="!configuration?.bridge_available">IA corporativa · gpt_bradesco</option><option value="demo" [disabled]="!configuration?.demo_available">Demonstração · regras ilustrativas</option></select></label>
+            <div class="lab-info-small">{{sim.mode==='demo'?'Modo demonstrativo: transições numéricas não calibradas; nenhuma chamada de IA.':'Modo IA: cada reação chama text_generator. Consumo estimado: agentes × rodadas × simulações.'}}</div>
+            <div class="lab-form-grid"><label>Rodadas por simulação<input type="number" [(ngModel)]="sim.rounds" min="1" max="6" step="1" title="Quantas vezes os agentes reagem em cada repetição"></label>
+              <label>Nº de simulações independentes<input type="number" [(ngModel)]="sim.repetitions" min="1" max="10" step="1" title="Executa o mesmo cenário várias vezes, reiniciando memória, rede e aleatoriedade"></label></div>
+            <label>Semente aleatória <span class="lab-label-hint">Reproduzível no modo demonstração</span><input type="number" [(ngModel)]="sim.seed" min="0" max="2147483647" step="1"></label>
+            <div class="lab-config-divider"><span>Incertezas do experimento</span><small>Controle o que pode variar entre rodadas</small></div>
+            <div class="lab-slider-set"><label><span>Incerteza <b>{{sim.uncertainty | percent:'1.0-0'}}</b></span><input type="range" min="0" max="1" step="0.05" [(ngModel)]="sim.uncertainty"></label><small>Variabilidade na reação individual</small></div>
+            <div class="lab-slider-set"><label><span>Pressão social <b>{{sim.social_pressure | percent:'1.0-0'}}</b></span><input type="range" min="0" max="1" step="0.05" [(ngModel)]="sim.social_pressure"></label><small>Peso das opiniões recebidas</small></div>
+            <div class="lab-slider-set"><label><span>Probabilidade de choque <b>{{sim.shock_probability | percent:'1.0-0'}}</b></span><input type="range" min="0" max="1" step="0.05" [(ngModel)]="sim.shock_probability"></label><small>Chance de evento novo por rodada</small></div>
+            <div class="lab-slider-set"><label><span>Intensidade do choque <b>{{sim.shock_intensity | percent:'1.0-0'}}</b></span><input type="range" min="0" max="1" step="0.05" [(ngModel)]="sim.shock_intensity"></label><small>Força contextual dos eventos</small></div>
+            <div class="lab-slider-set"><label><span>Densidade da rede <b>{{sim.network_density | percent:'1.0-0'}}</b></span><input type="range" min="0" max="1" step="0.05" [(ngModel)]="sim.network_density"></label><small>Proporção aproximada de conexões possíveis</small></div>
+            <button type="button" class="lab-advanced-toggle" (click)="showAdvanced=!showAdvanced" [attr.aria-expanded]="showAdvanced">{{showAdvanced?'− Ocultar':' + Mostrar'}} parâmetros do modelo</button>
+            @if(sim.mode==='bridge' && showAdvanced){
+              <div class="lab-slider-set"><label><span>Temperatura da IA <b>{{sim.temperature | number:'1.2-2'}}</b></span><input type="range" min="0" max="2" step="0.1" [(ngModel)]="sim.temperature"></label></div>
+              <label>Máximo de tokens por reação<input type="number" [(ngModel)]="sim.max_tokens_per_reaction" min="128" max="1200" step="32"></label>
+            }
+            <label>Janela de memória (rodadas/mensagens recentes)<input type="number" [(ngModel)]="sim.memory_window" min="1" max="10" step="1" title="Histórico contextual fornecido ao agente sem compartilhar memória entre simulações"></label>
+            <div class="lab-call-budget"><span>Reações planejadas</span><strong>{{selectedSocietyAgents().length * sim.rounds * sim.repetitions}}</strong><small>Limite: {{configuration?.max_model_calls??120}} por execução</small></div>
+            <button type="button" class="lab-full" (click)="setTab('intelligence')">Comparar alternativas ou rodar sensibilidade</button>
+            <p class="lab-cost-caveat">{{sim.repetitions}} simulação(ões) independentes, {{sim.rounds}} rodadas por simulação. No modo IA cada reação exige uma chamada ao modelo; podem ocorrer custos e latência.</p>
+            <button class="primary lab-full lab-run-button" type="button" (click)="start()" [disabled]="busy||!sim.environment_id||!sim.society_id||selectedSocietyAgents().length<1||selectedSocietyAgents().length*sim.rounds*sim.repetitions>(configuration?.max_model_calls||120)">▶ Executar simulação</button>
+            @if(!environments.length||!societies.length){<button class="lab-full" type="button" (click)="setTab('ambientes')">Configurar ambiente e sociedade</button>}
+          </div>
+        </aside>
+
+        <section class="lab-stage-column">
+          <div class="lab-panel lab-stage">
+            <div class="lab-stage-toolbar"><div><span class="eyebrow">02 · REDE EM TEMPO REAL</span><h2>Mapa de interações <span class="lab-live-dot" [class.active]="selectedRun?.status==='RUNNING'"></span></h2></div>
+              <div class="lab-stage-badges"><span>{{selectedRun?showRunStatus(selectedRun.status):'Prévia da sociedade'}}</span><span>{{selectedRun?.mode==='bridge'?'IA':selectedRun?.mode==='demo'?'DEMO':'SEM EXECUÇÃO'}}</span></div></div>
+            <div class="lab-world-change"> <span class="lab-world-bullet">◉</span><span><strong>Mundo atual</strong><small>{{currentEnvironment()?.context?.slice(0,120)||'Selecione um cenário para iniciar'}}</small></span>
+                @if(activeEnvironmentEvents().length){<span class="lab-world-alert">{{activeEnvironmentEvents().length}} mudança(s) até agora</span>}
+              </div>
+            <div class="lab-network" role="group" aria-label="Rede interativa de agentes; selecione um nó para consultar suas reações">
+              <div class="network-grid"></div>
+              @if(graphNodes().length){
+                <svg viewBox="0 0 900 435" preserveAspectRatio="xMidYMid meet" class="network-svg">
+                  <defs><filter id="lab-node-shadow" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#102639" flood-opacity=".15"/></filter></defs>
+                  @for(edge of graphEdges();track edge.source + '-' + edge.target){
+                    @if(node(edge.source)&&node(edge.target)){
+                      <line [attr.x1]="node(edge.source)?.x" [attr.y1]="node(edge.source)?.y" [attr.x2]="node(edge.target)?.x" [attr.y2]="node(edge.target)?.y"
+                        [attr.stroke]="edge.active?'#c24c67':'#cbd7df'" [attr.stroke-width]="edge.active?2.4:1.2" [class.lab-active-edge]="edge.active" [attr.stroke-dasharray]="edge.active?'7 6':null" [attr.opacity]="edge.active?0.85:0.55" />
+                    }
+                  }
+                  @for(n of graphNodes();track n.id){
+                    <g (click)="selectNode(n.id)" (keydown.enter)="selectNode(n.id)" tabindex="0" role="button" [attr.aria-label]="n.name + ', posição ' + n.stance" class="lab-network-node" [class.selected]="selectedAgentId===n.id">
+                      <circle [attr.cx]="n.x" [attr.cy]="n.y" r="29" [attr.fill]="n.hasReaction?(stanceClass(n.stance)==='support'?'#e1f5ec':stanceClass(n.stance)==='undecided'?'#fff1d9':'#fde4e9'):'#edf2f6'" stroke="#fff" stroke-width="4" filter="url(#lab-node-shadow)" />
+                      <circle [attr.cx]="n.x" [attr.cy]="n.y" r="25" fill="none" [attr.stroke]="stanceClass(n.stance)==='support'?'#2b977b':stanceClass(n.stance)==='undecided'?'#d29a32':'#c24c67'" [attr.stroke-width]="selectedAgentId===n.id?3:1.5" opacity=".75" />
+                      <text [attr.x]="n.x" [attr.y]="n.y+5" text-anchor="middle" font-size="13" font-weight="800" [attr.fill]="stanceClass(n.stance)==='support'?'#1f6657':stanceClass(n.stance)==='undecided'?'#8a631e':'#a32f4e'">{{n.type==='AGENTE_IA'?'IA':n.name.slice(0,2).toUpperCase()}}</text>
+                      <text [attr.x]="n.x" [attr.y]="n.y+46" text-anchor="middle" font-size="11" fill="#536a78" font-weight="650">{{n.name.length>18?n.name.slice(0,17)+'…':n.name}}</text>
+                      <title>{{n.name}} · {{stanceLabel(n.stance)}} · {{n.stance}}/100</title>
+                    </g>
+                  }
+                </svg>
+              }@else{
+                <div class="lab-network-empty"><span class="network-empty-icon">◎</span><strong>Uma sociedade ganha vida aqui</strong><p>Selecione uma sociedade ou carregue um cenário de exemplo para visualizar seus agentes.</p></div>
+              }
+              <div class="lab-network-key"><span><i class="dot-green"></i> {{currentEnvironment()?.high_label||'Alta'}}</span><span><i class="dot-amber"></i> {{currentEnvironment()?.middle_label||'Intermediária'}}</span><span><i class="dot-red"></i> {{currentEnvironment()?.low_label||'Baixa'}}</span></div>
+            </div>
+            <div class="lab-stage-bottom"><div class="lab-progress-label"><strong>{{selectedRun?'Simulação '+selectedRepetition+' · Rodada '+selectedRound+' / '+selectedRun.configuration.rounds:'Aguardando simulação'}}</strong><span>{{selectedRun?.completed??0}} / {{selectedRun?.total??0}} reações</span></div>
+              <div class="lab-progress"><span [style.width.%]="progress()"></span></div>
+              @if(selectedRun){<div class="lab-replay-control"><button type="button" title="Rodada anterior" aria-label="Rodada anterior" (click)="previousReplay()">❮</button>
+                <button type="button" class="lab-play-button" (click)="togglePlayback()">{{playing?'Pausar':'▶ Replay'}}</button>
+                <label for="round-replay">Reproduzir evolução</label><input id="round-replay" type="range" min="1" [max]="maxAvailableRound()" step="1" [ngModel]="selectedRound" (ngModelChange)="setRound($event)"><span>{{selectedRound}}/{{maxAvailableRound()}}</span>
+                <button type="button" title="Próxima rodada" aria-label="Próxima rodada" (click)="nextReplay()">❯</button>
+                @if(selectedRun.configuration.repetitions>1){<select class="lab-repetition-select" aria-label="Selecionar simulação" [ngModel]="selectedRepetition" (ngModelChange)="setRepetition($event)">
+                  @for(rep of selectedRun.result?.repetitions||[];track rep.index){<option [ngValue]="rep.index">Sim. {{rep.index}}</option>}
+                  @if(!selectedRun.result){@for(rep of availableRepetitions();track rep){<option [ngValue]="rep">Sim. {{rep}}</option>}}
+                </select>}
+                @if(['QUEUED','RUNNING'].includes(selectedRun.status)&&!followLive){<button type="button" (click)="followExecution()">Seguir ao vivo</button>}
+                @if(['QUEUED','RUNNING'].includes(selectedRun.status)){<button type="button" (click)="cancel()">Cancelar</button>}
+              </div>}
+            </div>
+          </div>
+          <div class="lab-world-state lab-panel"><div class="panel-head"><div><span class="eyebrow">AMBIENTE EM EVOLUÇÃO</span><h2>Estado do mundo na rodada {{selectedRound}}</h2></div><span class="lab-count">{{activeEnvironmentEvents().length}}</span></div>
+            <div class="lab-world-variables">@for(item of environmentVariables();track item.key){<span><b>{{item.key}}</b>{{item.value}}</span>}
+              @if(!environmentVariables().length){<small>Sem variáveis adicionais. Configure atributos do mundo na etapa 2.</small>}</div>
+            @for(change of activeEnvironmentEvents().slice(0,3);track change.sequence){<div class="lab-world-event"><span>Rodada {{change.round}}</span><strong>{{change.event_type==='SHOCK'?change.payload['label']:change.payload['name']}}</strong>
+                <small>{{change.event_type==='SHOCK'?'Choque aleatório de contexto':change.payload['description']}}</small></div>}
+          </div>
+        </section>
+        <aside class="lab-panel lab-conversation-panel" aria-label="Conversas e mudanças do mundo">
+          <div class="lab-chat-header"><div><span class="eyebrow">03 · ATIVIDADE DOS AGENTES</span><h2>Conversas & acontecimentos <span class="lab-live-dot" [class.active]="selectedRun?.status==='RUNNING'"></span></h2>
+            <p>Falas sintéticas e mensagens recebidas dos outros agentes, registradas por rodada.</p></div><span class="lab-chat-count">{{feedEvents().length}}</span></div>
+          <div class="lab-feed-switches" role="group" aria-label="Filtrar atividade">
+            <button type="button" [class.active]="feedFilter==='all'" (click)="feedFilter='all'">Tudo</button>
+            <button type="button" [class.active]="feedFilter==='conversations'" (click)="feedFilter='conversations'">Conversas</button>
+            <button type="button" [class.active]="feedFilter==='environment'" (click)="feedFilter='environment'">Ambiente</button>
+          </div>
+          @if(selectedAgentId){<label class="lab-chat-agent-filter"><input type="checkbox" [(ngModel)]="filterSelectedAgent"> Somente {{messageTo(selectedAgentId)}}
+            <button type="button" (click)="selectedAgentId='';filterSelectedAgent=false" title="Limpar seleção">×</button></label>}
+          <div class="lab-chat-feed" role="log" aria-live="off">
+            @for(event of feedEvents();track event.sequence){
+              @if(event.event_type==='REACTION'){
+                <button type="button" class="lab-chat-message lab-chat-reaction" (click)="inspectEvent(event)" [class.active]="selectedConversationSequence===event.sequence">
+                  <span class="lab-chat-avatar" [class]="stanceClass(event.payload['stance'])">{{event.payload['agent_name']?.slice(0,2)}}</span>
+                  <span class="lab-chat-content"><span class="lab-chat-meta"><b>{{event.payload['agent_name']}}</b><small>Reação · R{{event.round}}</small></span>
+                    <span class="lab-chat-bubble">{{event.payload['message']}}</span><span class="lab-chat-foot"><em>{{event.payload['action']}}</em><strong [class]="stanceClass(event.payload['stance'])">{{event.payload['stance']}}/100</strong></span></span>
+                </button>
+              }@else if(event.event_type==='CONVERSATION'){
+                <button type="button" class="lab-chat-message lab-chat-dialogue" [class.active]="selectedConversationSequence===event.sequence" (click)="inspectEvent(event)">
+                  <span class="lab-chat-avatar neutral">→</span><span class="lab-chat-content"><span class="lab-chat-meta"><b>{{messageTo(event.agent_id)}} → {{messageTo(event.peer_id)}}</b>
+                    <small>Mensagem dirigida · R{{event.round}}</small></span>
+                    <span class="lab-chat-bubble">{{event.payload['message']}}</span><span class="lab-chat-foot"><em>Resposta possível em rodada posterior</em></span></span>
+                </button>
+              }@else if(event.event_type==='INTERACTION'){
+                <button type="button" class="lab-chat-message lab-chat-interaction" (click)="inspectEvent(event)">
+                  <span class="lab-chat-avatar neutral">↗</span><span class="lab-chat-content"><span class="lab-chat-meta"><b>{{messageTo(event.agent_id)}}</b><small>Compartilhada com {{messageTo(event.peer_id)}} · R{{event.round}}</small></span>
+                    <span class="lab-chat-bubble">{{event.payload['message']}}</span><span class="lab-chat-foot"><em>Mensagem recebida da rodada anterior</em></span></span>
+                </button>
+              }@else{
+                <div class="lab-chat-event"><span>◈</span><div><small>Ambiente · Rodada {{event.round}}</small><strong>{{event.event_type==='SHOCK'?event.payload['label']:event.payload['name']}}</strong>
+                    <p>{{event.event_type==='SHOCK'?'Choque contextual gerado com a semente configurada.':event.payload['description']}}</p></div></div>
+              }
+            }
+            @if(!feedEvents().length){<div class="lab-chat-empty"><span>◎</span><strong>As conversas aparecerão aqui</strong><p>Inicie um experimento e veja as reações e as trocas entre agentes. Escolha um nó para filtrar as mensagens.</p></div>}
+          </div>
+          <div class="lab-chat-inspector">
+            @if(selectedAgent();as agent){<div class="lab-chat-inspector-title"><strong>{{agent.name}}</strong><button type="button" (click)="selectedAgentId='';filterSelectedAgent=false" aria-label="Fechar detalhe">×</button></div>
+              <p>{{agent.goal}}</p><div><span>Posição na rodada</span><b>{{agentReaction()?.payload?.['stance']??agent.initial_stance}} / 100</b></div>
+              @if(agentReaction();as reaction){<small>{{reaction.payload['reason']}}</small>}
+              <details><summary>Ver atributos do agente</summary>@for(item of agent.characteristics | keyvalue;track item.key){<p><b>{{item.key}}:</b> {{item.value}}</p>}</details>
+              <details><summary>Memória observável e decisões recentes</summary>
+                @for(history of agentTimeline();track history.sequence){<p><b>R{{history.round}}:</b> {{history.event_type==='REACTION'?history.payload['action']:history.payload['message']}}</p>}
+                @if(!agentTimeline().length){<p>Sem histórico até esta rodada.</p>}
+              </details>
+            }@else{<p><b>Inspeção de agente</b> · Selecione um nó no mapa para examinar objetivos, atributos, justificativas e evolução individual.</p>}
+          </div>
+        </aside>
+      </div>
+      <div class="lab-panel lab-small-history"><div class="panel-head"><div><span class="eyebrow">EXECUÇÕES</span><h2>Selecione um experimento anterior</h2></div><button type="button" (click)="setTab('resultados')">Ver consolidação</button></div><div class="lab-run-list">
+        @for(run of runs.slice(0,8);track run.id){<button type="button" [class.active]="selectedRun?.id===run.id" (click)="openRun(run.id)"><span>{{run.id.slice(0,8)}}</span><strong>{{showRunStatus(run.status)}}</strong><small>{{run.completed}}/{{run.total}} reações</small></button>}
+        @if(!runs.length){<small>Nenhuma execução registrada.</small>}
+      </div></div>
+    }
+
+    @if(tab==='resultados'){
+      <div class="lab-heading-row"><div><span class="eyebrow">CONSOLIDAÇÃO & AUDITORIA</span><h2>Resultados dos mundos simulados</h2><p>Indicadores são descritivos das saídas sintéticas, não estimativas de comportamento real.</p></div>
+        <div class="lab-toolbar">@if(selectedRun){<button type="button" (click)="cloneRun()">Duplicar configuração</button><button type="button" (click)="downloadRun('json')">Exportar JSON</button><button type="button" (click)="downloadRun('csv')">Exportar CSV</button><button type="button" (click)="downloadReport()">Relatório Markdown</button>}</div></div>
+      <div class="lab-results-layout">
+        <div class="lab-panel lab-result-history"><div class="panel-head"><div><span class="eyebrow">HISTÓRICO DE RODADAS</span><h2>Experimentos</h2></div></div>
+          @for(run of runs;track run.id){<button type="button" class="lab-result-item" (click)="openRun(run.id)" [class.selected]="selectedRun?.id===run.id"><strong>{{run.id.slice(0,10)}}</strong><small>{{run.mode==='bridge'?'IA corporativa':'Demonstrativo'}} · {{showRunStatus(run.status)}}</small><span>{{run.completed}}/{{run.total}} reações</span></button>}
+          @if(!runs.length){<p class="lab-empty">Sem experimentos salvos.</p>}
+        </div>
+        <div class="lab-result-content">
+          @if(selectedRun;as run){
+            <div class="lab-panel lab-result-overview"><div class="panel-head"><div><span class="eyebrow">RESULTADO SINTÉTICO</span><h2>{{run.snapshot.environment.name}}</h2></div><span class="lab-tag">{{showRunStatus(run.status)}}</span></div>
+              <div class="lab-run-metadata"><span>Execução {{run.id.slice(0,12)}}</span><span>{{run.mode==='bridge'?'IA corporativa':'Regras demonstrativas'}}</span><span>Semente {{run.configuration.seed}}</span><span>{{run.configuration.rounds}} rodadas previstas</span></div>
+              @if(run.result?.final;as final){<div class="lab-results-kpis"><div><span>{{run.snapshot.environment.high_label||'ALTA'}}</span><strong class="support">{{final.support}}</strong><small>Observações sintéticas ≥ {{run.snapshot.environment.high_threshold}}</small></div><div><span>{{run.snapshot.environment.middle_label||'MÉDIA'}}</span><strong class="undecided">{{final.undecided}}</strong><small>Observações sintéticas {{run.snapshot.environment.low_threshold}}–{{(run.snapshot.environment.high_threshold)-1}}</small></div><div><span>{{run.snapshot.environment.low_label||'BAIXA'}}</span><strong class="resistance">{{final.resistance}}</strong><small>Observações sintéticas &lt; {{run.snapshot.environment.low_threshold}}</small></div><div><span>INDICADOR MÉDIO</span><strong>{{final.mean_stance | number:'1.1-1'}}</strong><small>{{run.result?.repetitions_completed||1}} execução(ões) · escala 0–100</small></div></div>}
+              @else{<div class="lab-empty">A consolidação será apresentada quando houver reações processadas.</div>}
+            </div>
+            @if(run.result?.repetitions?.length){<div class="lab-panel lab-repeat-results"><div class="panel-head"><div><span class="eyebrow">DISTRIBUIÇÃO DE CENÁRIOS SINTÉTICOS</span><h2>Comparação entre {{run.result?.repetitions_completed}} execuções independentes</h2></div></div>
+              <div class="lab-repeat-list">@for(rep of run.result?.repetitions||[];track rep.index){<button type="button" (click)="viewRepetition(rep.index)" [class.active]="selectedRepetition===rep.index">
+                <span>Simulação {{rep.index}} <small>semente {{rep.seed}}</small></span><div class="lab-repeat-bar"><i [style.width.%]="rep.final?.mean_stance||0"></i></div><strong>{{rep.final?.mean_stance | number:'1.1-1'}}/100</strong></button>}</div>
+              <p class="lab-trend-description">Comparação de saídas produzidas pelo modelo, sem interpretação de probabilidades do mundo real.</p>
+            </div>}
+            <div class="lab-panel lab-trend"><div class="panel-head"><div><span class="eyebrow">EVOLUÇÃO COLETIVA</span><h2>Distribuição por rodada</h2></div></div>
+              @for(round of run.result?.rounds||[];track round.round){<div class="lab-trend-row"><span>Rodada {{round.round}}</span><div class="lab-stacked-bar"><span class="bar-support" [style.width.%]="100*round.support/round.agents" [title]="round.support+' na faixa alta'"></span><span class="bar-undecided" [style.width.%]="100*round.undecided/round.agents" [title]="round.undecided+' na faixa média'"></span><span class="bar-resistance" [style.width.%]="100*round.resistance/round.agents" [title]="round.resistance+' na faixa baixa'"></span></div><strong>{{round.mean_stance | number:'1.1-1'}}</strong></div>}
+              @if(!run.result?.rounds?.length){<p class="lab-empty">Rodadas ainda não consolidadas.</p>}
+              <div class="lab-chart-legend"><span class="support">● {{run.snapshot.environment.high_label||'Alta'}}</span><span class="undecided">● {{run.snapshot.environment.middle_label||'Média'}}</span><span class="resistance">● {{run.snapshot.environment.low_label||'Baixa'}}</span></div>
+            </div>
+            @if(run.result?.groups?.length){<div class="lab-panel lab-trend"><div class="panel-head"><div><span class="eyebrow">RECORTES DO EXPERIMENTO</span><h2>Posição por grupo sintético</h2></div></div>
+              @for(group of run.result?.groups||[];track group.name){<div class="lab-trend-row"><span [title]="group.name">{{group.name}}</span><div class="lab-stacked-bar"><span class="bar-support" [style.width.%]="group.mean_stance"></span></div><strong>{{group.mean_stance | number:'1.1-1'}}</strong></div>}
+              <p class="lab-trend-description">Média na escala ilustrativa de 0 a 100. Grupos pequenos não representam populações reais.</p>
+            </div>}
+            @if(run.result?.metrics?.length){<div class="lab-panel lab-metric-results"><div class="panel-head"><div><span class="eyebrow">SAÍDAS DEFINIDAS PELO CENÁRIO</span><h2>Indicadores customizados</h2></div></div>
+              <div class="lab-custom-metrics">@for(metric of run.result?.metrics||[];track metric.key){<div>
+                <span>{{metric.label}}</span>
+                @if(metric.kind==='number'){<strong>{{metric.mean | number:'1.1-3'}}</strong><small>Intervalo sintético: {{metric.minimum}} a {{metric.maximum}}</small>}
+                @else if(metric.kind==='boolean'){<strong>{{metric.true}} sim / {{metric.false}} não</strong>}
+                @else{@for(item of metric.counts | keyvalue;track item.key){<small>{{item.key}}: {{item.value}}</small>}}
+                <small>{{metric.observations}} observações sintéticas</small></div>}</div>
+              <p class="lab-trend-description">No modo demonstração, indicadores são gerados por regras ilustrativas a partir da escala legada, sem estimativa real.</p>
+            </div>}
+            <div class="lab-panel lab-calibration"><div class="panel-head"><div><span class="eyebrow">CHECAGEM EXTERNA · OPCIONAL</span><h2>Comparação com referência agregada</h2></div></div>
+              <p>Informe apenas uma média agregada de referência, sem nomes, CPFs ou microdados. A divergência não constitui validação estatística do simulador. Confirme previamente com Jurídico, Compliance e DPO quando aplicável.</p>
+              <div class="lab-calibration-form"><label>Média observada (0–100)<input type="number" min="0" max="100" [(ngModel)]="calibrationMean"></label>
+                <label>Fonte e período da referência<input [(ngModel)]="calibrationSource" maxlength="300" placeholder="Ex.: estudo interno agregado e autorizado"></label>
+                <label>Tamanho da amostra (opcional)<input type="number" min="1" [(ngModel)]="calibrationSampleSize"></label>
+                <label>Responsável pela revisão<input [(ngModel)]="calibrationReviewer" maxlength="100" placeholder="Responsável técnico"></label>
+                <button type="button" (click)="submitCalibration()" [disabled]="busy||run.status!=='COMPLETED'">Registrar comparação</button></div>
+              @for(item of calibrations;track item.id){<div class="lab-calibration-item"><span>Referência: {{item.observed_mean | number:'1.1-2'}} · Simulado: {{item.simulated_mean | number:'1.1-2'}}</span><strong>Desvio absoluto: {{item.absolute_deviation | number:'1.1-2'}}</strong><small>{{item.source_description}} · Revisado por {{item.validated_by}}</small></div>}
+            </div>
+            <div class="lab-panel lab-drift"><div class="panel-head"><div><span class="eyebrow">MONITORAMENTO DE CONSISTÊNCIA</span><h2>Comparar com execução anterior</h2></div></div>
+              <div class="lab-drift-form"><label>Limite de alerta (pontos)<input type="number" min="0" max="100" step="1" [(ngModel)]="driftThreshold"></label>
+                <button type="button" (click)="inspectDrift()" [disabled]="run.status!=='COMPLETED'">Comparar</button></div>
+              @if(driftResult;as drift){<p>@if(drift.previous_run_id){Diferença absoluta: <strong>{{drift.absolute_difference | number:'1.1-2'}}</strong> pontos · {{drift.flagged?'Limite ultrapassado':'Dentro do limite selecionado'}}.
+                }@else{Sem execução anterior concluída para este ambiente.}</p><small>{{drift.method_note}}</small>}
+            </div>
+            <div class="lab-panel lab-result-method"><div class="panel-head"><div><span class="eyebrow">GOVERNANÇA</span><h2>Rastreabilidade e limitações</h2></div></div>
+              <p>{{run.result?.method_note||'O experimento ainda não foi concluído.'}}</p>
+              <dl><div><dt>Reações registradas</dt><dd>{{run.completed}}</dd></div><div><dt>Conexões de rede</dt><dd>{{run.result?.network_edges??'—'}}</dd></div><div><dt>Eventos de interação</dt><dd>{{eventsCount('INTERACTION')}}</dd></div><div><dt>Choques registrados</dt><dd>{{eventsCount('SHOCK')}}</dd></div><div><dt>Hash do prompt</dt><dd class="mono">{{run.result?.prompt_sha256?.slice(0,16)||'Não aplicável'}}</dd></div><div><dt>Hash do cenário</dt><dd class="mono">{{run.result?.snapshot_sha256?.slice(0,16)||'Aguardando'}}</dd></div><div><dt>Versão do motor</dt><dd>{{run.result?.engine_version||'Legado'}}</dd></div><div><dt>Modelo configurado</dt><dd>{{run.result?.configured_model||'Não disponível'}}</dd></div><div><dt>Tokens reais de saída</dt><dd>{{run.result?.actual_token_usage?.output_tokens??'Não informado pela Bridge'}}</dd></div></dl>
+              <p class="lab-limitation">Não há amostragem representativa, validação causal ou intervalos de confiança calibrados. Exige validação com observações reais e revisão humana antes de orientar decisões bancárias ou jurídicas.</p>
+              @if(run.error_code){<p class="lab-failure">Execução não concluída · código técnico: {{run.error_code}}. Nenhum resultado foi inventado para preencher eventos ausentes.</p>}
+            </div>
+          }@else{<div class="lab-panel lab-empty">Execute uma simulação para visualizar resultados e exportar o histórico.</div>}
+        </div>
+      </div>
+    }
+    @if(tab==='intelligence'){
+      <div class="lab-heading-row"><div><span class="eyebrow">BEHAVIOR INTELLIGENCE</span><h2>Compare hipóteses e descubra a sensibilidade do seu simulador.</h2>
+        <p>Execute cenário-base e alternativas com os mesmos agentes e sementes. As diferenças são sintéticas e não substituem um experimento real.</p></div>
+        <div class="lab-toolbar"><button type="button" (click)="setTab('ambientes')">Configurar cenário</button><button type="button" (click)="setTab('simulacoes')">Rever parâmetros</button></div></div>
+      <div class="lab-intelligence-grid">
+        <section class="lab-panel lab-editor"><div class="panel-head"><div><span class="eyebrow">PLANEJAR COMPARAÇÃO A/B</span><h2>Variantes controladas</h2></div></div>
+          <div class="lab-intelligence-form">
+            <label>Nome do experimento<input [(ngModel)]="experimentName" maxlength="120" placeholder="Ex.: teste de preços"></label>
+            <label>Hipótese a investigar<textarea [(ngModel)]="experimentHypothesis" rows="3" maxlength="1200"></textarea></label>
+            <label>Cenário-base<select [(ngModel)]="sim.environment_id"><option value="">Selecione</option>@for(env of environments;track env.id){<option [value]="env.id">{{env.name}}</option>}</select></label>
+            <label>Sociedade base<select [(ngModel)]="sim.society_id"><option value="">Selecione</option>@for(society of societies;track society.id){<option [value]="society.id">{{society.name}} · {{society.agent_ids.length}} agentes</option>}</select></label>
+            <p class="lab-info-small">Usa {{sim.rounds}} rodadas × {{sim.repetitions}} repetições por cenário. Configure incertezas, modo IA e semente no Observatory. A população fica congelada antes de entrar na fila.</p>
+            @for(variant of variantDrafts;track variant;let i=$index){
+              <div class="lab-variant-card"><div class="lab-variant-head"><strong>Variante {{i+1}}</strong><button type="button" (click)="removeVariant(i)">Remover</button></div>
+                <label>Nome<input [(ngModel)]="variant.name" maxlength="80"></label>
+                <label>Parâmetro a variar<select [(ngModel)]="variant.parameter" [disabled]="!!variant.variable.trim()">
+                  @for(parameter of parameters;track parameter.key){<option [value]="parameter.key">{{parameter.label}}</option>}
+                </select></label>
+                @if(!variant.variable.trim()){<label>Novo valor<input type="number" [(ngModel)]="variant.value" min="0" [max]="variant.parameter==='temperature'?2:1" step="0.05"></label>}
+                <label>Ou alterar variável do ambiente<input [(ngModel)]="variant.variable" placeholder="Ex.: preco"></label>
+                @if(variant.variable.trim()){<label>Valor da variável<input [(ngModel)]="variant.variableValue" placeholder="Ex.: 79.90"></label>
+                  <label>Impacto hipotético em modo demo (-1 a +1)<input type="number" [(ngModel)]="variant.impact" min="-1" max="1" step="0.1" title="Efeito parametrizado sem calibração; no modo IA a mudança textual é interpretada pelo modelo"></label>}
+              </div>
+            }
+            <button type="button" (click)="addVariant()" [disabled]="variantDrafts.length>=6">+ Adicionar alternativa</button>
+            <div class="lab-budget-box"><span>Orçamento previsto · reações sintéticas</span><strong>{{experimentCost()}}</strong><small>Base + {{variantDrafts.length}} alternativas · limite agregado de {{(configuration?.max_model_calls||120)*3}} reações</small></div>
+            <button type="button" class="primary lab-full" (click)="startExperiment()" [disabled]="busy||!variantDrafts.length||!sim.environment_id||!sim.society_id">Executar comparação A/B</button>
+          </div>
+        </section>
+        <div class="lab-intelligence-right">
+          <section class="lab-panel lab-editor"><div class="panel-head"><div><span class="eyebrow">AUTOMAÇÃO</span><h2>Análise de sensibilidade</h2></div></div>
+            <div class="lab-intelligence-form"><p>Varie sistematicamente um parâmetro, mantendo agentes, rede inicial e semente comparáveis.</p>
+              <label>Parâmetro<select [(ngModel)]="sensitivityParameter"><option value="uncertainty">Incerteza</option><option value="social_pressure">Pressão social</option><option value="shock_probability">Probabilidade de choque</option><option value="network_density">Densidade da rede</option></select></label>
+              <div class="lab-form-grid"><label>Valor mínimo<input type="number" min="0" max="1" step="0.05" [(ngModel)]="sensitivityMinimum"></label><label>Valor máximo<input type="number" min="0" max="1" step="0.05" [(ngModel)]="sensitivityMaximum"></label></div>
+              <label>Pontos de comparação<input type="number" min="2" max="6" step="1" [(ngModel)]="sensitivitySteps"></label>
+              <button type="button" class="lab-full" (click)="startSensitivity()" [disabled]="busy">Executar grade de sensibilidade</button>
+            </div>
+          </section>
+          <section class="lab-panel lab-experiment-history"><div class="panel-head"><div><span class="eyebrow">BIBLIOTECA VERSIONADA</span><h2>Experimentos comparativos</h2></div><button type="button" (click)="loadExperiments()">Atualizar</button></div>
+            <div class="lab-experiment-list">@for(experiment of experiments;track experiment.id){<button type="button" [class.active]="selectedExperiment?.id===experiment.id" (click)="inspectExperiment(experiment.id)">
+                <strong>{{experiment.payload.name}}</strong><span>{{experiment.status}} · {{experiment.id.slice(0,8)}}</span></button>}
+              @if(!experiments.length){<p class="lab-empty">Nenhuma comparação. Prepare uma hipótese e execute a primeira.</p>}</div>
+          </section>
+          @if(selectedExperiment;as experiment){<section class="lab-panel lab-intelligence-results"><div class="panel-head"><div><span class="eyebrow">RESULTADOS A/B</span><h2>{{experiment.payload.name}}</h2></div><span class="lab-tag">{{experiment.status}}</span></div>
+              <p>{{experiment.payload.hypothesis}}</p>
+              @for(item of experiment.result?.comparison||[];track item.name){
+                <div class="lab-comparison-row"><div><strong>{{item.name}}</strong><small>{{item.status}} · {{item.run_id?.slice(0,8)||'Pendente'}}</small></div>
+                  <div class="lab-comparison-track"><span [style.width.%]="item.mean_stance??0"></span></div>
+                  <div><strong>{{item.mean_stance===null?'—':(item.mean_stance | number:'1.1-2')}}</strong>
+                    <small>Δ base: {{item.delta_to_base===null?'—':(item.delta_to_base | number:'1.1-2')}}</small>
+                    @if(item.run_id){<button type="button" (click)="openResult(item.run_id)">Inspecionar</button>}</div></div>
+              }
+              <p class="lab-limitation">{{experiment.result?.disclaimer||'A comparação será atualizada conforme as execuções forem concluídas.'}}</p>
+              <small>Orçamento estimado: {{experiment.payload.budget?.model_reactions||'—'}} chamadas de reação. A Bridge pode gerar custos e latência adicionais.</small>
+            </section>}
+        </div>
+      </div>
+    }
+    <footer class="lab-footer">Behavior · Ecossistema jurídico <span>Perfis fictícios · Modelos exploratórios · Evidência de execução auditável</span></footer>
+  </div>
+</main>

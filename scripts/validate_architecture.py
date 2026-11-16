@@ -29,16 +29,16 @@ def main() -> int:
     source = (CHATBOT_ROOT / "backend" / "services" / "process_intelligence.py").read_text(encoding="utf-8")
     bridge = (CHATBOT_ROOT / "backend" / "services" / "bradesco_bridge.py").read_text(encoding="utf-8")
     chat = (CHATBOT_ROOT / "backend" / "services" / "chat_service.py").read_text(encoding="utf-8")
-    gpt = (CHATBOT_ROOT / "gpt_bradesco.py").read_text(encoding="utf-8")
+    gpt = (ROOT / "gpt_bradesco.py").read_text(encoding="utf-8")
     if "generate_text(" not in source or "text_generator" not in bridge:
         raise SystemExit("A análise documental deve continuar usando gpt_bradesco.text_generator.")
     if "answer_question(" not in chat or "agente_informacional" not in bridge or "def agente_informacional(" not in gpt:
         raise SystemExit("O chatbot deve usar gpt_bradesco.agente_informacional e retornar o campo answer.")
     # A separação de módulos evita acoplamento de contratos e regras financeiras.
     actual_applications = {folder.name for folder in (ROOT / "applications").iterdir() if folder.is_dir() and folder.name != "__pycache__"}
-    if not {"chatbot", "auditoria"}.issubset(actual_applications) or not (ROOT / "backend" / "routers" / "bjn.py").is_file():
+    if not {"chatbot", "auditoria", "behavior"}.issubset(actual_applications) or not (ROOT / "backend" / "routers" / "bjn.py").is_file():
         raise SystemExit("Estrutura integrada de BJN, Auditoria e Chatbot está incompleta.")
-    print("Arquitetura integrada validada: AI Ready isolado de BJN e Auditoria.")
+    print("Arquitetura integrada validada: AI Ready, BJN, Auditoria e Behavior registrados.")
     return 0
 
 

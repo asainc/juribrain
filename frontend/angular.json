@@ -28,7 +28,8 @@
               "src/hub-home-dashboard.scss",
               "src/ecosystem.scss",
               "src/app/bjn/demands/demands.scss",
-              "src/demand-dashboard.scss"
+              "src/demand-dashboard.scss",
+              "src/behavioral-lab.scss"
             ]
           },
           "configurations": {

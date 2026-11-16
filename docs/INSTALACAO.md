@@ -12,8 +12,6 @@ py -3.12 -m venv .venv
 python -m pip install -r requirements.lock
 python -m pip install --no-deps -e .
 Copy-Item .env.example .env
-Copy-Item applications/auditoria/.env.example applications/auditoria/.env
-Copy-Item applications/chatbot/.env.example applications/chatbot/.env
 cd frontend
 npm run setup
 npm run doctor
@@ -45,6 +43,7 @@ O instalador não altera automaticamente as configurações npm globais nem faz 
 - BJN `GET http://127.0.0.1:8000/api/v3/saude`
 - Auditoria `GET http://127.0.0.1:8000/services/auditoria/api/v2/saude`
 - Chatbot `GET http://127.0.0.1:8000/services/chatbot/api/v3/saude`
+- Behavior `GET http://127.0.0.1:8000/api/v3/laboratorio-comportamental/configuracao` (informa configuração local, não disponibilidade externa)
 
 **Observação:** responder 200 nesses endpoints atesta apenas roteamento e inicialização local; não comprova disponibilidade de modelo de IA, credenciais, homologação financeira ou segurança de produção.
 
@@ -52,11 +51,13 @@ O instalador não altera automaticamente as configurações npm globais nem faz 
 
 Edite `config/runtime.json` ou exporte `BACKEND_PORT` e `FRONTEND_PORT` antes de chamar `node scripts/start-dev.mjs`. O script gera `frontend/.runtime-proxy.json` com ambos os prefixos; removerá o arquivo ao encerrar. A configuração da SPA `frontend/public/app-config.json` contém URLs relativas por padrão e não requer troca de porta.
 
-### Configuração dos três backends
+### Configuração dos quatro produtos
 
-- BJN lê `.env` e `config/app.settings.json`, com precedência de variáveis de ambiente. Usa `BRADESCO_*` e `BJN_*` documentados em `.env.example`.
-- Auditoria lê `applications/auditoria/.env` e `applications/auditoria/config/app.settings.json`. Use `AUDITORIA_ENV_FILE` ou `AUDITORIA_CONFIG_PATH` para localização personalizada. Índices e dados locais de auditoria ficam sob `applications/auditoria/data`, não devem ser versionados.
-- Chatbot lê `applications/chatbot/.env` e `applications/chatbot/config/app.settings.json`. Use `CHATBOT_ENV_FILE` ou `CHATBOT_CONFIG_PATH` para localização personalizada.
+- **Todos:** o único arquivo de ambiente é `.env` **na raiz**, ou um mesmo arquivo externo indicado por `APP_ENV_FILE`. `backend/central_environment.py` centraliza a leitura; `gpt_bradesco.py` existe somente na raiz. Configure identificador, senha, deployment e `BRADESCO_QA_WORKFLOW_CODE` uma única vez.
+- **BJN:** também lê `config/app.settings.json`, com chaves `BJN_*` no mesmo `.env`.
+- **Auditoria:** conserva somente `applications/auditoria/config/app.settings.json` e `AUDITORIA_CONFIG_PATH` para parâmetros operacionais. Índices/dados locais permanecem isolados sob `applications/auditoria/data`.
+- **Chatbot:** conserva `applications/chatbot/config/app.settings.json` e `CHATBOT_CONFIG_PATH` para parâmetros de análise documental.
+- **Behavior:** mantém agentes, cenários e simulações em `.runtime/behavioral_lab/` por padrão, configuráveis via `BEHAVIORAL_LAB_*` no `.env` da raiz. O modo de simulação fictícia é restrito a `APP_ENV=local`.
 
 Em produção, considere obter segredos de um vault corporativo em vez de arquivos locais. Não use caminhos compartilhados nem repositórios Git para persistir documentos jurídicos, valores pessoais, tokens, chaves ou arquivos extraídos.
 

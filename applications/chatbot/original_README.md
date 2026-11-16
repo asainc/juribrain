@@ -143,7 +143,7 @@ BRADESCO_AMBIENTE=dev
 BRADESCO_TEXT_MODEL=<deployment_autorizado>
 BRADESCO_IDENTIFICADOR=<segredo_no_ambiente>
 BRADESCO_SENHA=<segredo_no_ambiente>
-BRADESCO_QA_WORKFLOW_CODE=CD_WRFL_QA_778_LEITURA_SENTENCA_PIAUI_AAJR_SYNC
+BRADESCO_QA_WORKFLOW_CODE=WORKFLOW_TESTE_FICTICIO
 ```
 
 O projeto também aceita token conforme o contrato já implementado em `gpt_bradesco.py`.
@@ -237,7 +237,7 @@ O campo do chatbot não usa `text_generator`. A pergunta é encaminhada sem rees
 
 ```python
 {
-    "workflow_code": "CD_WRFL_QA_778_LEITURA_SENTENCA_PIAUI_AAJR_SYNC",
+    "workflow_code": "WORKFLOW_TESTE_FICTICIO",
     "question": pergunta_digitada,
     "async_mode": False,
 }

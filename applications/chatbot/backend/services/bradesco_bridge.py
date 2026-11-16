@@ -75,7 +75,7 @@ class BradescoBridgeClient:
         if self._module is not None:
             return self._module
         try:
-            module = importlib.import_module("applications.chatbot.gpt_bradesco")
+            module = importlib.import_module("gpt_bradesco")
         except Exception as exc:  # pragma: no cover - depende do host corporativo
             raise BradescoBridgeError(
                 "bradesco_modulo_indisponivel",

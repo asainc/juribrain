@@ -1,6 +1,6 @@
 # Ecossistema Jurídico
 
-Aplicação única que reúne **BJN**, **Auditoria de Pagamentos** e **Chatbot / AI Ready**. A interface e seus módulos originais usam a mesma identidade visual: superfícies claras, navegação lateral, tipografia grafite e acento vermelho. A entrada padrão agora é uma página inicial que encaminha a cada aplicativo.
+Aplicação única que reúne **BJN**, **Auditoria de Pagamentos**, **Chatbot / AI Ready** e **Behavior**. A interface e seus módulos originais usam a mesma identidade visual: superfícies claras, navegação lateral, tipografia grafite e acento vermelho. A entrada padrão agora é uma página inicial que encaminha a cada aplicativo.
 
 ## Primeira execução (Windows / Python 3.12)
 
@@ -10,7 +10,7 @@ Aplicação única que reúne **BJN**, **Auditoria de Pagamentos** e **Chatbot /
 2. Crie o ambiente Python: `py -3.12 -m venv .venv`.
 3. Ative-o: `.venv\Scripts\activate` (PowerShell: `.venv\Scripts\Activate.ps1`).
 4. Instale: `python -m pip install -r requirements.lock` e depois `python -m pip install --no-deps -e .`.
-5. Crie os arquivos locais ` .env`, `applications/auditoria/.env`, `applications/chatbot/.env` a partir de cada `.env.example`. Insira eventuais credenciais **somente** nesses arquivos locais ou no gerenciador corporativo de segredos. Não commitá-las.
+5. Crie **somente** `.env` na raiz com `Copy-Item .env.example .env`; configure `BRADESCO_IDENTIFICADOR`, `BRADESCO_SENHA` e `BRADESCO_QA_WORKFLOW_CODE` nesse local ou via gerenciador corporativo de segredos. Todos os módulos usam a mesma configuração. Nunca versione o arquivo.
 6. Na pasta `frontend`, execute `npm run setup` (utilize o registry Nexus corporativo homologado). O instalador tenta a instalação normal e **apenas** se ocorrer o erro `edgesOut` do npm, aplica a recuperação de resolução de dependências.
 7. Ainda em `frontend`, execute `npm run doctor` e `npm run build`. Se a compilação concluir, retorne à raiz.
 8. Rode `node scripts/start-dev.mjs`. Abra `http://127.0.0.1:4200/`.
@@ -43,8 +43,21 @@ Se a instalação continuar falhando, consulte o log local do npm e execute `npm
 - **Departamento consultado:** aparece como primeira tela de Nova demanda. A escolha **4040 - Jurídico** encaminha à triagem atual, com as opções de ofícios e intimações. Os demais departamentos aguardam configuração de encaminhamento.
 - **Agência bancária:** a pesquisa aceita partes do número ou nome, e o autocomplete utiliza um CSV de duas colunas.
 - **Catálogos:** `data/cadastros/departamentos.csv` inclui a opção 4040 fornecida na especificação. `data/cadastros/agencias.csv` contém somente o cabeçalho; a lista real deve ser preenchida pelo responsável autorizado. Para usar CSVs externos, configure `BJN_DEPARTMENTS_CSV` e `BJN_AGENCIES_CSV` no ambiente.
+  - Para consultar e acrescentar departamentos, use `python scripts/manage_bjn_departments.py list` e `python scripts/manage_bjn_departments.py add --code 1234 --name "Unidade Exemplo"` (códigos fictícios). Após salvar, clique **Atualizar lista** na tela. Veja `docs/BJN_ATUALIZACAO_DEPARTAMENTOS_E_SELETORES.md`.
 
 Documentação: `docs/BJN_CADASTROS_DEPARTAMENTOS_AGENCIAS_PARECER_AUTOMATICO.md`.
+
+## Erro de cadastro BJN — versão de 16/11/2026
+
+Ao receber uma falha `O servidor não conseguiu concluir o cadastro. Identificador: ...`, não envie novamente antes de consultar a lista de demandas e conferir se o protocolo já existe. O identificador correlaciona a resposta aos logs do backend, mas não explica sozinho a origem do erro.
+
+A versão atual separa a criação do protocolo das análises auxiliares e informa falhas de persistência ou diretório de anexos com códigos específicos. Para verificar localmente os caminhos configurados, catálogos e esquema da base **sem acessar os dados jurídicos**, execute na raiz do projeto:
+
+```powershell
+python scripts/diagnose_bjn_registration.py
+```
+
+Roteiro de diagnóstico e limitações: `docs/BJN_DIAGNOSTICO_CADASTRO_5XX_2026-11-16.md`. Nunca exclua banco de dados para tentar resolver a falha sem backup e autorização do responsável pela implantação.
 
 ## Gestão de demandas BJN — melhorias de novembro de 2026
 
@@ -58,7 +71,7 @@ Detalhes técnicos, critérios de autorização, decisões e roteiro de homologa
 
 | Solução | Rota no navegador | Funções preservadas |
 | --- | --- | --- |
-| Portal | `/` | Acesso aos três aplicativos |
+| Portal | `/` | Acesso aos quatro aplicativos |
 | BJN | `/bjn` | Minutas e questionário, prévia de cláusulas e chat BJN |
 | Demandas BJN | `/bjn/demandas` | Cadastro, acompanhamento e tramitação |
 | Auditoria de Pagamentos | `/auditoria-pagamentos/calculo` | Conferência documental e cálculo judicial |
@@ -67,6 +80,7 @@ Detalhes técnicos, critérios de autorização, decisões e roteiro de homologa
 | Lotes | `/auditoria-pagamentos/lotes` | Importação e execução em lote |
 | Índices | `/auditoria-pagamentos/indices` | Gestão de índices |
 | Chatbot / AI Ready | `/chatbot` | Análise de PDFs, síntese, linha do tempo e perguntas e respostas |
+| Behavior | `/behavior` | Agentes, cenários, simulações multiagente e observatório |
 
 O link antigo `/ai-ready` redireciona para `/chatbot` sem quebrar favoritos anteriores.
 
@@ -78,16 +92,18 @@ Navegador
      ├─ Home /  navegação e identidade visual compartilhadas
      ├─ BJN (minutas e demandas)  ─────────── /api/v3/*
      ├─ Auditoria de Pagamentos ──────────── /services/auditoria/api/v2/*
-     └─ Chatbot / AI Ready ───────────────── /services/chatbot/api/v3/*
+     ├─ Chatbot / AI Ready ───────────────── /services/chatbot/api/v3/*
+     └─ Behavior ─────────────────────────── /api/v3/laboratorio-comportamental/*
                     │  proxy Angular /api + /services
                     ▼
             FastAPI único (porta 8000)
              ├─ backend/ (BJN e API v3 existente)
              ├─ applications/auditoria/backend/ (FastAPI isolado e motor judicial_calc)
-             └─ applications/chatbot/backend/ (FastAPI isolado e IA documental)
+             ├─ applications/chatbot/backend/ (FastAPI isolado e IA documental)
+             └─ applications/behavior/backend/ (extensão da API principal)
 ```
 
-As subaplicações são **montadas em um único processo ASGI** e compartilham somente a infraestrutura HTTP. Contratos Pydantic, configurações, conexões, persistência, endpoints e versões permanecem isolados. Não se misturam dados de auditoria com dados de demandas BJN. O servidor principal inicializa e encerra o ciclo de vida da auditoria explicitamente.
+Auditoria e Chatbot são **montados em um único processo ASGI** e compartilham somente a infraestrutura HTTP. Contratos Pydantic, configurações, conexões, persistência, endpoints e versões permanecem isolados. Não se misturam dados de auditoria com dados de demandas BJN. O servidor principal inicializa e encerra o ciclo de vida da auditoria explicitamente.
 
 ### Onde estão as funcionalidades
 
@@ -99,9 +115,9 @@ As subaplicações são **montadas em um único processo ASGI** e compartilham s
 - `applications/auditoria/backend/` e `applications/auditoria/src/judicial_calc/`: API de auditoria e motor de cálculo sem mudanças nas regras matemáticas.
 - `applications/chatbot/backend/`: API de IA processual independente.
 - `frontend/public/app-config.json`: três URLs de API definidas uma única vez para o frontend.
-- `config/runtime.json` e `scripts/start-dev.mjs`: startup e proxy na mesma porta, com observação de alterações nos três módulos.
+- `config/runtime.json` e `scripts/start-dev.mjs`: startup e proxy na mesma porta, com observação de alterações nos quatro módulos.
 
-Consulte `docs/ARQUITETURA_ECOSSISTEMA.md` e `docs/INSTALACAO.md` para limitações, parâmetros, teste e decisões técnicas. Os manuais de origem estão preservados em `applications/<aplicacao>/docs/`.
+Consulte `docs/ARQUITETURA_ECOSSISTEMA.md` e `docs/INSTALACAO.md` para limitações, parâmetros, teste e decisões técnicas. Os manuais de origem da Auditoria e do Chatbot estão em `applications/<aplicacao>/docs/`; o manual do Behavior está em `docs/BEHAVIOR_V3_GUIDE.md`.
 
 ## Testes
 
@@ -112,7 +128,7 @@ npm test
 npm run build
 ```
 
-A suíte Python principal e o teste estrutural Node.js foram executados nesta entrega. A compilação Angular `npm run build` não foi executada porque a instalação npm não estava disponível no ambiente de construção. A validação operacional ponta a ponta com modelos corporativos, documentos reais anonimizados e série de índices não foi efetuada. Antes de publicar, execute os testes de negócio e segurança no ambiente de homologação e obtenha aprovação de Jurídico/Compliance/DPO conforme aplicável.
+As verificações e limitações desta integração estão documentadas em `docs/VALIDACAO_INTEGRACAO_BEHAVIOR_2026_11_16.md`. A compilação Angular `npm run build` não foi executada porque a instalação npm não estava disponível no ambiente de construção. A validação operacional ponta a ponta com modelos corporativos, documentos reais anonimizados e série de índices não foi efetuada. Antes de publicar, execute os testes de negócio e segurança no ambiente de homologação e obtenha aprovação de Jurídico/Compliance/DPO conforme aplicável.
 
 ## Segurança
 
@@ -159,3 +175,11 @@ No cadastro, a seleção/upload de PDF pesquisável inicia a identificação de 
 A página **BJN > Demandas** ganhou indicadores limitados aos resultados consultados, hierarquia visual mais clara, filtros avançados recolhíveis, tabela refinada e seleção em lote com limite exibido de 50 registros. No **AI Ready**, a entrada orienta a preparação dos documentos com seis objetivos de análise selecionáveis, checklist cível/trabalhista e perguntas preparatórias que não são enviadas automaticamente. Após a análise, um painel rápido usa dados efetivamente extraídos dos PDFs e permite exportar uma **pauta de revisão jurídica (.txt)**, distinta do dossiê geral.
 
 As novas regras de apresentação estão em `frontend/src/demand-dashboard.scss` e `frontend/src/hub-home-dashboard.scss`, ambos globais para preservar o limite de estilos por componente. Ver `docs/UX_BJN_AI_READY_HUB_2026-10-30.md` para fluxos de uso, decisões, limites e checklist de homologação. **Validação neste pacote:** 82 testes Python e 44 testes estruturais de frontend aprovados; compilação Angular real e testes E2E de UI não executados neste ambiente.
+
+## Quarta aplicação: Behavior e novas integrações
+
+O Behavior integra o menu e a página inicial, com rota `/behavior` e API `/api/v3/laboratorio-comportamental`. Inclui agentes, cenários, eventos, repetições, conversas, métricas e visualização de interações. O modo demonstração utiliza exclusivamente dados sintéticos.
+
+**Uma configuração corporativa:** copie `.env.example` para `.env` **na raiz** e ajuste uma só vez `BRADESCO_IDENTIFICADOR`, `BRADESCO_SENHA`, `BRADESCO_QA_WORKFLOW_CODE` e parâmetros da Bridge. Todas as aplicações leem o mesmo arquivo e importam o único `gpt_bradesco.py` da raiz. Reinicie a API após alterar `.env`. Não versionar segredos.
+
+**Como incluir novos módulos:** utilize `python scripts/scaffold_application.py triagem --label "Triagem"` e consulte o tutorial completo [`docs/COMO_ADICIONAR_APLICACOES.md`](docs/COMO_ADICIONAR_APLICACOES.md). O registro de backend está em `applications/registry.py`; menu, home e aplicação ativa estão centralizados no frontend em `core/application-registry.ts`.

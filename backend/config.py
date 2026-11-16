@@ -10,6 +10,7 @@ from pydantic import Field, SecretStr, ValidationError, field_validator, model_v
 from starlette.config import Config
 
 from backend.contracts.base import Contract
+from backend.central_environment import environment_file_path as shared_environment_file_path, read_environment_file
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_BRADESCO_TEXT_MODEL = "gpt-5.1"
@@ -64,6 +65,11 @@ class Settings(Contract):
     bjn_notification_username: str = ""
     bjn_notification_password: SecretStr = SecretStr("")
 
+    # Behavior: somente dados sintéticos e banco SQLite local para desenvolvimento.
+    behavioral_lab_database_path: Path = ROOT / ".runtime" / "behavioral_lab" / "laboratorio.sqlite3"
+    behavioral_lab_demo_enabled: bool = True
+    behavioral_lab_max_calls: int = Field(default=120, ge=2, le=180)
+
     gateway_token: SecretStr = SecretStr("")
 
     @field_validator("cors_origins")
@@ -87,22 +93,15 @@ class Settings(Contract):
 
 
 def environment_file_path() -> Path:
-    """Resolve o arquivo central .env a partir da raiz, independentemente do terminal.
-
-    Uma escolha explícita em APP_ENV_FILE continua permitida, mas um caminho
-    relativo sempre se refere à raiz do projeto, evitando arquivos diferentes
-    conforme a pasta de onde o servidor foi iniciado.
-    """
-    configured = os.environ.get("APP_ENV_FILE", "").strip()
-    candidate = Path(configured).expanduser() if configured else ROOT / ".env"
-    return (ROOT / candidate if not candidate.is_absolute() else candidate).resolve()
+    """Expõe a fonte única de configuração corporativa da plataforma."""
+    return shared_environment_file_path(ROOT)
 
 
 def _read_environment_file(env_path: Path) -> dict[str, str]:
-    """Lê o .env sem transferir credenciais para o ambiente global do processo."""
-    if not env_path.is_file():
-        return {}
-    return Config(env_path, environ={}, encoding="utf-8-sig").file_values
+    """Lê o arquivo central sem gravar credenciais no processo."""
+    if env_path != environment_file_path():
+        raise ValueError("A plataforma aceita somente o .env central.")
+    return read_environment_file(ROOT)
 
 
 def text_model_configuration_diagnostic(settings: Settings) -> dict[str, object]:
@@ -198,6 +197,9 @@ def load_settings() -> Settings:
         "BJN_NOTIFICATION_SENDER": "bjn_notification_sender",
         "BJN_NOTIFICATION_USERNAME": "bjn_notification_username",
         "BJN_NOTIFICATION_PASSWORD": "bjn_notification_password",
+        "BEHAVIORAL_LAB_DATABASE_PATH": "behavioral_lab_database_path",
+        "BEHAVIORAL_LAB_DEMO_ENABLED": "behavioral_lab_demo_enabled",
+        "BEHAVIORAL_LAB_MAX_CALLS": "behavioral_lab_max_calls",
     }
     for layer in (file_values, os.environ):
         for variable, field in mapping.items():
@@ -216,6 +218,11 @@ def load_settings() -> Settings:
             data["bjn_allowed_lawyers"] = [value.strip().lower() for value in layer["BJN_ALLOWED_LAWYERS"].split(",") if value.strip()]
         if "CORS_ORIGINS" in layer:
             data["cors_origins"] = [item.strip() for item in layer["CORS_ORIGINS"].split(",") if item.strip()]
+    # Um caminho relativo sempre se refere à raiz, nunca ao diretório atual.
+    behavior_path = data.get("behavioral_lab_database_path")
+    if behavior_path:
+        candidate = Path(behavior_path).expanduser()
+        data["behavioral_lab_database_path"] = (ROOT / candidate).resolve() if not candidate.is_absolute() else candidate
     try:
         return Settings.model_validate(data)
     except ValidationError as error:

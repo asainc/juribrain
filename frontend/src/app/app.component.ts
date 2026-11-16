@@ -4,10 +4,10 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
 import { NotificationsComponent } from './shared/notifications.component';
+import { APPLICATIONS, applicationForUrl } from './core/application-registry';
+import type { ApplicationDescriptor } from './core/application-registry';
 import { NotificationsComponent as AuditNotificationsComponent } from './auditoria/shared/notifications.component';
 
-type ApplicationKey = 'home' | 'bjn' | 'auditoria' | 'chatbot';
-type ApplicationDescriptor = { key: ApplicationKey; label: string; subtitle: string; route: string; badge: string; };
 
 @Component({
   selector: 'app-root',
@@ -66,6 +66,11 @@ type ApplicationDescriptor = { key: ApplicationKey; label: string; subtitle: str
                 <a routerLink="/bjn/demandas/nova" class="top-new-demand">+ Nova demanda</a>
               </nav>
             }
+            @if (activeApplication().key === 'behavior') {
+              <nav aria-label="Seções Behavior" class="top-level-nav top-level-nav--context">
+                <span>Agentes sintéticos</span><span>Cenários e eventos</span><span>Experimentos</span>
+              </nav>
+            }
             @if (activeApplication().key === 'chatbot') {
               <nav aria-label="Recursos do chatbot" class="top-level-nav top-level-nav--context">
                 <span>Processos cíveis e trabalhistas</span><span>Agenda e evidências</span><span>Perguntas aos autos</span>
@@ -86,19 +91,8 @@ export class AppComponent {
   private readonly destroyRef = inject(DestroyRef);
   readonly navigationCollapsed = signal(false);
   readonly currentUrl = signal(this.router.url);
-  readonly applications: ApplicationDescriptor[] = [
-    {key: 'home', label: 'Página inicial', subtitle: 'Visão geral das soluções', route: '/', badge: 'IN'},
-    {key: 'bjn', label: 'BJN', subtitle: 'Minutas e demandas', route: '/bjn', badge: 'BJ'},
-    {key: 'auditoria', label: 'Auditoria de Pagamentos', subtitle: 'Cálculos e conferências', route: '/auditoria-pagamentos/calculo', badge: 'AP'},
-    {key: 'chatbot', label: 'Chatbot / AI Ready', subtitle: 'Inteligência processual', route: '/chatbot', badge: 'IA'},
-  ];
-  readonly activeApplication = computed<ApplicationDescriptor>(() => {
-    const url = this.currentUrl();
-    if (url.startsWith('/bjn')) return this.applications[1];
-    if (url.startsWith('/auditoria-pagamentos')) return this.applications[2];
-    if (url.startsWith('/chatbot') || url.startsWith('/ai-ready')) return this.applications[3];
-    return this.applications[0];
-  });
+  readonly applications: readonly ApplicationDescriptor[] = APPLICATIONS;
+  readonly activeApplication = computed<ApplicationDescriptor>(() => applicationForUrl(this.currentUrl()));
   readonly isAudit = computed(() => this.activeApplication().key === 'auditoria');
   readonly isHome = computed(() => this.activeApplication().key === 'home');
   constructor() {

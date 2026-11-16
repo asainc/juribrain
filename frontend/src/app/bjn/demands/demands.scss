@@ -166,9 +166,15 @@ app-bjn-searchable-select{display:block;width:100%;min-width:0}
 .bjn-combobox-field .bjn-combobox-toggle:hover:not(:disabled){background:#f4f6f8;border:0}
 .bjn-combobox--open .bjn-combobox-toggle span{display:inline-block;transform:rotate(180deg)}
 .bjn-combobox-popover{position:absolute;z-index:80;inset-inline:0;top:calc(100% + 5px);max-height:255px;overflow-y:auto;overscroll-behavior:contain;border:1px solid #d9e0e6;border-radius:9px;background:#fff;box-shadow:0 14px 35px #233d5224;padding:5px}
-.bjn-combobox-option{padding:10px 12px;border-radius:6px;cursor:pointer;font-size:.81rem;line-height:1.4;overflow-wrap:anywhere;color:#334756}
+.bjn-combobox-option{display:block;width:100%;min-height:0;border:0;background:transparent;text-align:left;font-family:inherit;padding:10px 12px;border-radius:6px;cursor:pointer;font-size:.81rem;line-height:1.4;overflow-wrap:anywhere;color:#334756}
 .bjn-combobox-option:hover,.bjn-combobox-option.active{background:#fff0f3;color:#a12b46}
 .bjn-combobox-option[aria-selected="true"]{font-weight:750}
 .bjn-combobox-empty,.bjn-combobox-more{font-size:.75rem;padding:12px;color:#697985;line-height:1.45}
 .bjn-combobox-more{margin:2px 0 0;border-top:1px solid #edf0f3}
 @media(max-width:620px){.bjn-combobox-popover{max-height:220px}}
+
+/* Catálogo corporativo: informação objetiva e botão para reconsultar o CSV. */
+.bjn-catalog-toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin:7px 0 2px;color:#687783;font-size:.75rem}
+.bjn-catalog-refresh{border:1px solid #d9e0e6;background:#fff;color:#7b2940;min-height:30px;border-radius:6px;padding:5px 10px;font-size:.74rem;font-weight:600}
+.bjn-catalog-refresh:hover:not(:disabled){background:#fff3f5}
+.bjn-catalog-refresh:disabled{opacity:.6;cursor:progress}

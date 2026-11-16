@@ -1,3 +1,31 @@
+## 2026-11-16 — Behavior como quarta aplicação e configuração corporativa única
+
+- Primeiro ZIP preservado como base, inclusive correções recentes de BJN.
+- Behavior 3 integrado em `applications/behavior/backend`, com frontend em `/behavior`, ciclo de vida próprio e API sob `/api/v3/laboratorio-comportamental`.
+- Criados registros explícitos (`applications/registry.py` e `core/application-registry.ts`), teste de contrato e utilitário de criação de módulos.
+- Único `.env` e `gpt_bradesco.py` na raiz; removidas cópias dos produtos Auditoria e Chatbot.
+- Adicionado tutorial de extensão e modelo de decisões arquiteturais.
+- Pendências de validação: ambiente Bridge corporativo real, políticas de acesso e homologação jurídico/compliance; responsável técnico a definir pela equipe mantenedora.
+
+## 2026-11-16 — BJN: catálogo de departamentos e seleção pesquisável
+
+- Identificado que o CSV distribuído contém somente `4040 - Jurídico`; inclusão de unidades continua administrativa e não é feita por texto livre.
+- Ajustada seleção por clique/teclado para evitar dupla confirmação e permitir reabrir as opções ao clicar no campo.
+- Adicionado botão **Atualizar lista** em Departamento consultado e Solicitante, com contador de opções disponíveis e indicação explícita de falha de carregamento.
+- Criado `scripts/manage_bjn_departments.py` para listar/incluir unidades com validação de código de quatro dígitos, detecção de duplicidade e gravação atômica.
+- Preservada a restrição de roteamento ao `4040 - Jurídico`; novas unidades podem ser **Solicitante**, mas exigem fluxo aprovado para serem destinos atendidos.
+- Documentados os passos e testes em `docs/BJN_ATUALIZACAO_DEPARTAMENTOS_E_SELETORES.md`.
+- Responsável técnico: manutenção do ecossistema; integração com catálogos reais e homologação do browser pendentes.
+
+## 2026-11-16 — BJN: diagnóstico e recuperação do cadastro HTTP 5xx
+
+- Corrigido risco de retorno HTTP 500 após criação confirmada quando etapas auxiliares de IA falham inesperadamente.
+- Falhas na classificação e na sugestão documental passam a gerar aviso de revisão, preservando o protocolo e os anexos cadastrados.
+- Erros de banco ocupado, banco indisponível e diretório de upload sem escrita retornam códigos estruturados e mensagens públicas seguras.
+- Registro de estágio da requisição e identificador para correlação com logs sem dados documentais, SQL ou credenciais.
+- Criado diagnóstico local somente de metadados e documentação de triagem. Causa original no ambiente do usuário ainda requer correlação com o log correspondente.
+- Responsável técnico: manutenção do ecossistema; homologação do ambiente de execução pendente.
+
 ## 2026-11-12 — BJN: seletores pesquisáveis e alinhamento dos filtros
 
 - Retirado o texto explicativo do campo de agência no filtro avançado.

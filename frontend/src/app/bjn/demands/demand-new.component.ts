@@ -32,6 +32,10 @@ type ValidationIssue = {fieldId:string; message:string};
           <app-bjn-searchable-select inputId="consulted-dept" ariaLabel="Departamento consultado" [options]="configuration()?.department_options || []"
             [value]="form.consulted_department" (valueChange)="form.consulted_department=$event"
             placeholder="Selecione ou digite código ou nome" [required]="true" />
+          <div class="bjn-catalog-toolbar"><span role="status">{{configuration()?.department_options?.length ?? 0}} departamento(s) disponível(is) no cadastro.</span>
+            <button type="button" class="bjn-catalog-refresh" (click)="refreshDirectoryOptions()" [disabled]="directoryBusy()">{{directoryBusy()?'Atualizando…':'Atualizar lista'}}</button>
+          </div>
+          @if(directoryError()){<p class="demand-error" role="alert">{{directoryError()}}</p>}
         </div>
         @if(form.consulted_department && form.consulted_department!=='4040 - Jurídico'){
           <p class="bjn-route-result" role="status">O fluxo de atendimento desta aplicação está disponível para 4040 - Jurídico. O departamento escolhido ainda não possui encaminhamento configurado; nenhuma demanda foi enviada.</p>
@@ -82,6 +86,10 @@ type ValidationIssue = {fieldId:string; message:string};
               <app-bjn-searchable-select inputId="dept" ariaLabel="Solicitante" [options]="configuration()?.department_options || []"
                 [value]="form.requesting_department" (valueChange)="form.requesting_department=$event"
                 placeholder="Selecione ou digite código ou nome" [required]="true" />
+              <div class="bjn-catalog-toolbar"><span>{{configuration()?.department_options?.length ?? 0}} opção(ões) cadastrada(s)</span>
+                <button type="button" class="bjn-catalog-refresh" (click)="refreshDirectoryOptions()" [disabled]="directoryBusy()">{{directoryBusy()?'Atualizando…':'Atualizar lista'}}</button>
+              </div>
+              @if(directoryError()){<p class="demand-error" role="alert">{{directoryError()}}</p>}
             </div>
             <div class="demand-field"><label>Usuário solicitante</label>
               <div class="demand-readonly"><strong>{{configuration()?.actor?.name || 'Validando sessão...'}}</strong><small>Identificação fornecida pela sessão autenticada.</small></div>
@@ -260,6 +268,8 @@ export class BjnDemandNewComponent implements OnInit {
     {code:'OFICIO_SEM_BANCO',title:'Ofício judicial sem o Banco como parte',hint:'Atendimento operacional.'},
     {code:'OUTRAS',title:'Nenhuma das opções anteriores',hint:'Continuar para cadastro e triagem da equipe.'},
   ];
+  readonly directoryBusy=signal(false);
+  readonly directoryError=signal('');
   readonly departmentSelected=signal(false);
   readonly triageCategory=signal<TriageCategory|null>(null);
   readonly triageResult=signal<TriageDecision|null>(null);
@@ -401,6 +411,32 @@ export class BjnDemandNewComponent implements OnInit {
     const element=document.getElementById(fieldId);
     element?.scrollIntoView({behavior:'smooth',block:'center'});
     element?.focus({preventScroll:true});
+  }
+
+  /** Reconsulta os CSVs no servidor sem recarregar a página nem perder o formulário. */
+  async refreshDirectoryOptions():Promise<void> {
+    if(this.directoryBusy())return;
+    this.directoryBusy.set(true);
+    this.directoryError.set('');
+    try {
+      const refreshed=await firstValueFrom(this.api.configuration());
+      const previous=this.configuration();
+      this.configuration.set(previous?{
+        ...previous,
+        department_options:refreshed.department_options,
+        agency_options:refreshed.agency_options,
+      }:refreshed);
+      // Não preserva uma opção removida do catálogo aprovado.
+      if(this.form.requesting_department && !refreshed.department_options.includes(this.form.requesting_department)){
+        this.form.requesting_department='';
+      }
+      if(this.form.consulted_department && !refreshed.department_options.includes(this.form.consulted_department)){
+        this.changeDepartment();
+        this.form.consulted_department='';
+      }
+    } catch(cause) {
+      this.directoryError.set(`Não foi possível carregar os departamentos: ${friendlyApiError(cause)}`);
+    } finally {this.directoryBusy.set(false);}
   }
 
   ngOnInit():void {void this.loadActor();}

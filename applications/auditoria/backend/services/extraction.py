@@ -153,7 +153,7 @@ class ExtractionService:
             *self.prompts,
             ROOT / "config/calculation_policy.json",
             ROOT / "config/extraction_tasks.json",
-            ROOT / "gpt_bradesco.py",
+            ROOT.parents[1] / "gpt_bradesco.py",
         ]
         self.version = hashlib.sha256(b"".join(path.read_bytes() for path in versioned_files)).hexdigest()
         self.workers = DurableExtractionWorkers(

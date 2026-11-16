@@ -8,12 +8,13 @@ function read(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), 'utf8');
 }
 
-test('a navegação principal oferece três aplicações, homepage e alias do AI Ready', () => {
+test('a navegação principal oferece quatro aplicações, homepage e alias do AI Ready', () => {
   const routes = read('src/app/app.routes.ts');
   assert.equal(routes.includes("path: 'ai-ready'"), true);
   assert.equal(routes.includes("path: 'bjn'"), true);
   assert.equal(routes.includes("path: 'auditoria-pagamentos'"), true);
   assert.equal(routes.includes("path: 'chatbot'"), true);
+  assert.equal(routes.includes("path: 'behavior'"), true);
   assert.equal(routes.includes("redirectTo: 'chatbot'"), true);
   assert.equal(routes.includes("path: ''"), true);
 });
@@ -28,7 +29,7 @@ test('AI Ready possui upload, linha do tempo e chat flutuante', () => {
 
 test('o frontend executável contém BJN, auditoria, chatbot e página inicial', () => {
   const appEntries = fs.readdirSync(path.join(root, 'src/app'), {withFileTypes: true}).map(item => item.name).sort();
-  assert.deepEqual(appEntries, ['ai-ready', 'app.component.ts', 'app.routes.ts', 'auditoria', 'bjn', 'chatbot', 'core', 'home', 'shared', 'templates'].sort());
+  assert.deepEqual(appEntries, ['ai-ready', 'app.component.ts', 'app.routes.ts', 'auditoria', 'behavioral-lab', 'bjn', 'chatbot', 'core', 'home', 'shared', 'templates'].sort());
 });
 
 

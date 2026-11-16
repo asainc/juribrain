@@ -1,6 +1,7 @@
 """API de cadastro, andamento, distribuição e visualização de demandas BJN."""
 from __future__ import annotations
 
+import logging
 from typing import Annotated
 
 from fastapi import APIRouter, File, Form, Query, Request, UploadFile
@@ -22,6 +23,7 @@ from backend.services.bjn_demand_store import (
 )
 
 router = APIRouter(prefix="/bjn/demandas", tags=["BJN · Demandas"])
+logger = logging.getLogger("ai_ready.bjn_demand_registration")
 
 
 def actor_from(request: Request) -> Actor:
@@ -192,8 +194,29 @@ def _validate_departments(data: DemandCreate, *, allow_legacy: bool = False) -> 
         raise ServiceError("O fluxo BJN atende apenas o departamento 4040 - Jurídico.", 422, code="INVALID_CONSULTED_DEPARTMENT")
 
 
+def _log_post_registration_failure(request: Request, stage: str, error: Exception) -> None:
+    """Registra a etapa que falhou, sem texto do processo ou caminho do arquivo.
+
+    O protocolo já foi confirmado no banco. Falhas auxiliares de IA jamais
+    devem converter uma criação bem-sucedida em resposta HTTP 500.
+    """
+    logger.warning(
+        "bjn_post_registration_analysis_failed",
+        extra={
+            "request_id": getattr(request.state, "request_id", None),
+            "stage": stage,
+            "error_type": type(error).__name__,
+            "error_code": error.code if isinstance(error, ServiceError) else "UNEXPECTED_ANALYSIS_ERROR",
+        },
+    )
+
+
 def _refresh_document_suggestion(request: Request, demand: dict, actor: Actor, ids: list[str]) -> dict:
-    """Classifica e depois gera o parecer, sem bloquear o cadastro quando IA falhar."""
+    """Complementa o protocolo existente, sem condicionar cadastro à disponibilidade da IA.
+
+    Uma falha nessa etapa não invalida o registro transacional já concluído.
+    A interface exibe avisos para que o advogado realize a conferência manual.
+    """
     if not ids:
         return demand
     try:
@@ -205,19 +228,26 @@ def _refresh_document_suggestion(request: Request, demand: dict, actor: Actor, i
         result = request.app.state.bjn_nature_classifier.classify(sources, demand["service_nature"])
         demand["nature_classification"] = result.as_dict()
         if result.detected_nature and result.status == "IDENTIFICADA" and result.detected_nature != demand["service_nature"]:
-            # A alteração só ocorre com PDF reconhecido e vinculado ao protocolo.
             demand = store.update_nature(demand["id"], actor, result.detected_nature, sources[0][3], result.prompt_hash)
             demand["nature_classification"] = result.as_dict()
-    except ServiceError as exc:
-        demand["nature_classification"] = {"status": "INDETERMINADA", "message": str(exc), "detected_nature": None}
+    except Exception as exc:
+        _log_post_registration_failure(request, "nature_classification", exc)
+        demand["nature_classification"] = {
+            "status": "INDETERMINADA",
+            "message": "Cadastro realizado. Classificação automática indisponível; confira manualmente a natureza.",
+            "detected_nature": None,
+            "changed": False,
+            "warnings": ["Classificação não concluída. Revisão humana necessária."],
+        }
     if demand["service_nature"] not in PROMPTS:
         return demand
     try:
         updated = _analyze_saved_documents(request, demand["id"], actor, ids[:MAX_ANALYSIS_FILES])
         updated["nature_classification"] = demand.get("nature_classification")
         return updated
-    except ServiceError as exc:
-        demand["document_analysis_error"] = str(exc)
+    except Exception as exc:
+        _log_post_registration_failure(request, "document_suggestion", exc)
+        demand["document_analysis_error"] = "Cadastro realizado. A análise automática não foi concluída; os anexos estão disponíveis para revisão humana."
         return demand
 
 
@@ -235,10 +265,13 @@ def create_journey_demand(request: Request, payload: Annotated[str, Form()], fil
         raise ServiceError("Triagem ausente ou expirada. Retorne à primeira etapa.", 409, code="TRIAGE_EXPIRED")
     validate_journey_fields(data, len(files or []))
     _validate_departments(data, allow_legacy=request.app.state.settings.environment == "local")
+    request.state.bjn_stage = "upload_validation"
     uploaded = _uploaded(request, files or [], "ANEXO")
     try:
+        request.state.bjn_stage = "registration_persistence"
         created = store_from(request).create(data, actor, uploaded)
         pdf_ids = [doc["id"] for doc in created["documents"] if doc["media_type"] == "application/pdf"]
+        request.state.bjn_stage = "post_registration_analysis"
         return _refresh_document_suggestion(request, created, actor, pdf_ids)
     finally:
         _cleanup(uploaded)
@@ -259,10 +292,13 @@ def create_demand(request: Request, payload: Annotated[str, Form()], files: Anno
     if request.app.state.settings.environment != "local":
         raise ServiceError("Use o cadastro de demandas com triagem obrigatória.", 409, code="JOURNEY_REQUIRED")
     actor = actor_from(request)
+    request.state.bjn_stage = "upload_validation"
     uploaded = _uploaded(request, files or [], "ANEXO")
     try:
+        request.state.bjn_stage = "registration_persistence"
         created = store_from(request).create(data, actor, uploaded)
         pdf_ids = [doc["id"] for doc in created["documents"] if doc["media_type"] == "application/pdf"]
+        request.state.bjn_stage = "post_registration_analysis"
         return _refresh_document_suggestion(request, created, actor, pdf_ids)
     finally:
         _cleanup(uploaded)

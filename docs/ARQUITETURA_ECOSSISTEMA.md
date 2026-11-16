@@ -24,9 +24,9 @@ Reutilizados os tokens de estilo, navegação, tipografia e vermelho de destaque
 
 **Justificativa**: uma compilação Angular serve aos três serviços; não há fallback silencioso para API incorreta.
 
-## ADR-004 — Independência das configurações e segredos
+## ADR-004 — Histórico: configurações independentes (substituído pelo ADR-008)
 
-BJN: `.env` e `config/app.settings.json`. Auditoria: `applications/auditoria/.env`, `AUDITORIA_ENV_FILE`, `AUDITORIA_CONFIG_PATH` e JSON específico. Chatbot: `applications/chatbot/.env`, `CHATBOT_ENV_FILE`, `CHATBOT_CONFIG_PATH` e JSON específico. Se as três integrações usam a mesma identidade corporativa, prefira injeção comum via secret manager, sem duplicar credenciais em código.
+**Estado histórico, não utilizar para nova instalação:** inicialmente Auditoria e Chatbot tinham `.env` separados. Essa arquitetura foi substituída em 16/11/2026 pelo **ADR-008**, que exige apenas o arquivo `.env` na raiz e um `gpt_bradesco.py`. Os JSONs operacionais específicos continuam independentes.
 
 **Trade-off**: os nomes de variáveis corporativas do gateway mantêm o contrato original em cada produto. Variáveis de ambiente de sistema podem afetar mais de um serviço; revise o escopo ao publicar.
 
@@ -65,3 +65,17 @@ As rotas de BJN e Chatbot não substituem revisão jurídica humana. O frontend 
 **Justificativa:** evita transformar um erro conhecido do gerenciador de dependências em falha opaca do servidor Angular. Não muda código, API, regras jurídicas, interfaces nem políticas de autenticação dos três módulos.
 
 **Limites e riscos:** `--legacy-peer-deps` reduz a validação automática de peers: não é permitido tratar a instalação como homologação. Validar `npm run build`, lockfile, tree de dependências, permissões, licenças, origem dos artefatos e testes completos no ambiente autorizado. Não foi possível baixar pacotes e compilar Angular neste ambiente sem registry npm disponível. A responsabilidade de revisão técnica e de segurança permanece com o time mantenedor.
+
+## ADR-007 — Integração do Behavior com registro de módulos (16/11/2026)
+
+**Decisão:** preservar integralmente a primeira entrega (incluindo melhorias recentes de demandas BJN) e incorporar apenas o Behavior 3 como nova extensão, com seus contratos, motor, repositório, ciclo de vida e testes em `applications/behavior/backend`. O host usa `applications/registry.py` para registrar extensões de API e aplicações montadas. O frontend concentra menu e catálogo em `core/application-registry.ts`. A interface usa o mesmo shell visual.
+
+**Justificativa:** facilitar evolução sem mesclar regras de domínio e sem perder correções do BJN. Os endpoints originais de BJN, Auditoria e Chatbot foram preservados. Behavior usa `/api/v3/laboratorio-comportamental`.
+
+**Limites:** o processamento ainda ocorre no mesmo processo. Contenção de recursos e falhas graves podem impactar outros módulos; uma arquitetura de serviços isolados exigirá decisão de implantação futura.
+
+## ADR-008 — Fonte corporativa única (16/11/2026)
+
+**Decisão:** `backend/central_environment.py` fornece o único `.env` da raiz ou um único `APP_ENV_FILE` externo compartilhado por todos os módulos. Auditoria e Chatbot deixam de ter `.env.example` próprio; preservam JSONs de configuração operacional. Todos os adaptadores importam `gpt_bradesco` da raiz, sem cópias da implementação. Behavior recebe a Bridge já inicializada pelo host.
+
+**Justificativa:** credenciais, modelo e workflow Q&A precisam ser alterados uma só vez. **Trade-off:** reiniciar a API para aplicar mudanças; configuração única não equivale a permissão de compartilhar dados pessoais entre módulos. Tokens e senhas não devem ir para cliente web, logs ou repositório.

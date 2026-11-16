@@ -6,6 +6,8 @@ export const routes: Routes = [
   {path: 'bjn/demandas/:id', loadComponent: () => import('./bjn/demands/demand-detail.component').then(m => m.BjnDemandDetailComponent)},
   {path: 'bjn/demandas', loadComponent: () => import('./bjn/demands/demand-list.component').then(m => m.BjnDemandListComponent)},
   {path: 'bjn', loadComponent: () => import('./bjn/bjn-page.component').then(m => m.BjnPageComponent)},
+  {path: 'behavior', loadComponent: () => import('./behavioral-lab/behavioral-lab-page.component').then(m => m.BehavioralLabPageComponent)},
+  {path: 'laboratorio-comportamental', redirectTo: 'behavior', pathMatch: 'full'},
   {path: 'chatbot', loadComponent: () => import('./chatbot/chatbot-page.component').then(m => m.ChatbotPageComponent)},
   {path: 'ai-ready', redirectTo: 'chatbot', pathMatch: 'full'},
   {path: 'auditoria-pagamentos', children: [
