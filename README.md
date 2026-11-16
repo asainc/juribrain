@@ -1,5 +1,14 @@
 # Ecossistema Jurídico
 
+## Behavior — mapa editável, tempo e diagnóstico da IA corporativa
+
+O mapa do Behavior aceita arrastar agentes por mouse/toque ou usar as setas do teclado. As posições são coordenadas relativas e ficam salvas **neste navegador por sociedade**; **Reorganizar mapa** restaura a disposição padrão. A simulação não depende da posição visual do nó.
+
+A execução apresenta estado, tempo efetivo sem pausas confirmadas, início, término e motivo seguro das falhas. O motor **IA corporativa** utiliza `text_generator` do `gpt_bradesco.py` centralizado, com `BRADESCO_TEXT_MODEL` e temperatura por experimento. O `BRADESCO_QA_WORKFLOW_CODE` é exclusivo do Q&A e não seleciona o modelo de geração. O `.env` permanece único na raiz.
+
+Confira diagnóstico, roteiro de homologação e limitações em [`docs/BEHAVIOR_MAPA_STATUS_BRIDGE_2026-11-16.md`](docs/BEHAVIOR_MAPA_STATUS_BRIDGE_2026-11-16.md). A pasta `.runtime` contém dados e chaves de **cada instalação** e não acompanha os pacotes de código; preserve-a separadamente durante atualizações. O build Angular e a conexão real com a Bridge devem ser validados no ambiente corporativo.
+
+
 Aplicação única que reúne **BJN**, **Auditoria de Pagamentos**, **Chatbot / AI Ready** e **Behavior**. A interface e seus módulos originais usam a mesma identidade visual: superfícies claras, navegação lateral, tipografia grafite e acento vermelho. A entrada padrão agora é uma página inicial que encaminha a cada aplicativo.
 
 ## Primeira execução (Windows / Python 3.12)

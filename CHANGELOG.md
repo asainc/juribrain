@@ -1,3 +1,11 @@
+## 2026-11-16 — Behavior: mapa livre, tempo e diagnóstico da IA corporativa
+
+- Coordenadas editáveis por arraste com mouse/toque e por teclado, normalizadas no SVG para responsividade; posição por sociedade salva localmente no navegador e botão para reorganizar.
+- Painel de execução com estados distintos, timestamps, cronômetro efetivo sem pausas confirmadas e justificativas de falha sanitizadas com etapa/código da execução.
+- Corrigida incompatibilidade real na assinatura de `BradescoBridgeClient.generate_text_with_metadata(temperature=...)`, mantendo comportamento anterior de outros módulos.
+- Migração SQLite aditiva de timestamps de execução; biblioteca de diagnósticos sem dados sensíveis e testes de integração com fachada corporativa mockada.
+- Validação corporativa real da Bridge e compilação Angular completa pendentes. Referência: `docs/BEHAVIOR_MAPA_STATUS_BRIDGE_2026-11-16.md`.
+
 ## 2026-11-16 — Behavior: correção do feed e controle da execução
 
 - Corrigida a compressão vertical no painel "Conversas & acontecimentos": cartões preservam altura natural, com quebra de linhas e rolagem interna independente.

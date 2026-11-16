@@ -12,6 +12,7 @@ import sqlite3
 import threading
 from contextlib import contextmanager
 from datetime import datetime, timezone
+from applications.behavior.backend.diagnostics import describe_failure
 from pathlib import Path
 from uuid import uuid4
 from backend.errors import ServiceError
@@ -76,10 +77,22 @@ class LabRepository:
             columns = {item["name"] for item in db.execute("PRAGMA table_info(lab_runs)")}
             if "pause_requested" not in columns:
                 db.execute("ALTER TABLE lab_runs ADD COLUMN pause_requested INTEGER NOT NULL DEFAULT 0")
+            # Campos novos e opcionais: a migração não altera o histórico anterior.
+            for name, definition in (
+                ("started_at", "TEXT"), ("finished_at", "TEXT"),
+                ("paused_at", "TEXT"), ("paused_seconds", "REAL NOT NULL DEFAULT 0"),
+                ("failure_stage", "TEXT"),
+            ):
+                if name not in columns:
+                    db.execute(f"ALTER TABLE lab_runs ADD COLUMN {name} {definition}")
             # Workers são locais ao processo. Reiniciar o servidor interrompe inclusive
             # uma simulação pausada; não afirmamos que um worker inexistente possa retomar.
             db.execute("UPDATE lab_runs SET status = 'INTERRUPTED', error_code = 'SERVER_RESTART', "
-                       "pause_requested = 0, updated_at = ? WHERE status IN ('RUNNING','PAUSE_REQUESTED','PAUSED')", (utc_now(),))
+                       "pause_requested = 0, finished_at = COALESCE(finished_at, ?), "
+                       "paused_seconds = paused_seconds + CASE WHEN paused_at IS NOT NULL "
+                       "AND started_at IS NOT NULL THEN MAX(0, (julianday(?) - julianday(paused_at)) * 86400) ELSE 0 END, "
+                       "paused_at = NULL, updated_at = ? "
+                       "WHERE status IN ('RUNNING','PAUSE_REQUESTED','PAUSED')", (utc_now(), utc_now(), utc_now()))
             db.execute("UPDATE lab_experiments SET status = 'INTERRUPTED', updated_at = ? WHERE status = 'RUNNING'", (utc_now(),))
 
     @contextmanager
@@ -199,14 +212,41 @@ class LabRepository:
             result["pause_requested"] = bool(result["pause_requested"])
             if include_events:
                 result["events"] = self._events(db, run_id)
-        return result
+        return self._decorate_run(result)
 
     def list_runs(self) -> list[dict]:
         with self._lock, self._db() as db:
-            rows = db.execute("SELECT id,mode,status,completed,total,created_at,updated_at,error_code,configuration,result FROM lab_runs ORDER BY created_at DESC LIMIT 40").fetchall()
-        return [dict(id=r["id"], mode=r["mode"], status=r["status"], completed=r["completed"], total=r["total"], created_at=r["created_at"],
-                     updated_at=r["updated_at"], error_code=r["error_code"], configuration=json.loads(r["configuration"]),
-                     result=json.loads(r["result"]) if r["result"] else None) for r in rows]
+            rows = db.execute("SELECT * FROM lab_runs ORDER BY created_at DESC LIMIT 40").fetchall()
+        records = []
+        for row in rows:
+            run = dict(row)
+            run["configuration"] = json.loads(run["configuration"])
+            run["snapshot"] = json.loads(run["snapshot"])
+            run["result"] = json.loads(run["result"]) if run["result"] else None
+            run["cancel_requested"] = bool(run["cancel_requested"])
+            run["pause_requested"] = bool(run["pause_requested"])
+            records.append(self._decorate_run(run))
+        return records
+
+    @staticmethod
+    def _decorate_run(run: dict) -> dict:
+        """Calcula o tempo efetivo excluindo pausas confirmadas, sem inferir históricos antigos."""
+        run["error_reason"] = describe_failure(run.get("error_code"))
+        started = run.get("started_at")
+        if not started:
+            run["elapsed_seconds"] = 0 if run.get("status") in {"QUEUED", "PAUSE_REQUESTED", "PAUSED"} else None
+            return run
+        try:
+            initial = datetime.fromisoformat(started)
+            finished = datetime.fromisoformat(run["finished_at"]) if run.get("finished_at") else datetime.now(timezone.utc)
+            paused_since = datetime.fromisoformat(run["paused_at"]) if run.get("paused_at") else None
+            total = (finished - initial).total_seconds() - float(run.get("paused_seconds") or 0)
+            if paused_since:
+                total -= max(0, (finished - paused_since).total_seconds())
+            run["elapsed_seconds"] = max(0, int(total))
+        except (ValueError, TypeError, OverflowError):
+            run["elapsed_seconds"] = None
+        return run
 
     @staticmethod
     def _events(db, run_id: str) -> list[dict]:
@@ -222,10 +262,21 @@ class LabRepository:
         return [{"sequence": r["sequence"], "round": r["round"], "event_type": r["event_type"], "agent_id": r["agent_id"],
                  "peer_id": r["peer_id"], "payload": json.loads(r["payload"]), "created_at": r["created_at"]} for r in rows]
 
-    def transition(self, run_id: str, status: str, *, result: dict | None = None, error_code: str | None = None) -> None:
+    def transition(self, run_id: str, status: str, *, result: dict | None = None,
+                   error_code: str | None = None, failure_stage: str | None = None) -> None:
+        """Guarda momento do início/fim e motivo técnico sem persistir texto sensível da IA."""
+        now = utc_now()
+        terminal = status in {"COMPLETED", "FAILED", "CANCELLED", "INTERRUPTED"}
         with self._lock, self._db() as db:
-            db.execute("UPDATE lab_runs SET status=?, result=?, error_code=?, updated_at=? WHERE id=?",
-                       (status, json.dumps(result, ensure_ascii=False) if result is not None else None, error_code, utc_now(), run_id))
+            db.execute("UPDATE lab_runs SET status=?, result=?, error_code=?, failure_stage=?, updated_at=?, "
+                       "started_at=CASE WHEN ?='RUNNING' THEN COALESCE(started_at, ?) ELSE started_at END, "
+                       "finished_at=CASE WHEN ? THEN COALESCE(finished_at, ?) ELSE finished_at END, "
+                       "paused_seconds=paused_seconds + CASE WHEN ? AND paused_at IS NOT NULL "
+                       "AND started_at IS NOT NULL THEN MAX(0, (julianday(?) - julianday(paused_at))*86400) ELSE 0 END, "
+                       "paused_at=CASE WHEN ? THEN NULL ELSE paused_at END WHERE id=?",
+                       (status, json.dumps(result, ensure_ascii=False) if result is not None else None,
+                        error_code, failure_stage, now, status, now, int(terminal), now,
+                        int(terminal), now, int(terminal), run_id))
 
     def append(self, run_id: str, round_index: int, event_type: str, payload: dict, *, agent_id: str | None = None, peer_id: str | None = None, progress: bool = False) -> None:
         with self._lock, self._db() as db:
@@ -261,10 +312,10 @@ class LabRepository:
     def mark_paused(self, run_id: str) -> None:
         """Confirma pausa apenas após o worker atingir um checkpoint seguro."""
         with self._lock, self._db() as db:
-            db.execute("UPDATE lab_runs SET status='PAUSED', updated_at=? "
+            db.execute("UPDATE lab_runs SET status='PAUSED', paused_at=COALESCE(paused_at,?), updated_at=? "
                        "WHERE id=? AND pause_requested=1 AND cancel_requested=0 "
                        "AND status IN ('QUEUED','RUNNING','PAUSE_REQUESTED')",
-                       (utc_now(), run_id))
+                       (utc_now(), utc_now(), run_id))
 
     def resume(self, run_id: str) -> None:
         """Retoma a execução com seu snapshot, memória e trilha de eventos existentes."""
@@ -275,9 +326,12 @@ class LabRepository:
             # Execuções pausadas antes do primeiro evento retornam à fila.
             initial = db.execute("SELECT 1 FROM lab_events WHERE run_id=? LIMIT 1", (run_id,)).fetchone() is None
             status = "QUEUED" if initial and row["completed"] == 0 else "RUNNING"
-            result = db.execute("UPDATE lab_runs SET pause_requested=0, status=?, updated_at=? "
-                                "WHERE id=? AND status IN ('PAUSED','PAUSE_REQUESTED') AND cancel_requested=0",
-                                (status, utc_now(), run_id))
+            now = utc_now()
+            result = db.execute("UPDATE lab_runs SET pause_requested=0, status=?, updated_at=?, "
+                                "paused_seconds=paused_seconds + CASE WHEN paused_at IS NOT NULL "
+                                "AND started_at IS NOT NULL THEN MAX(0,(julianday(?) - julianday(paused_at))*86400) ELSE 0 END, "
+                                "paused_at=NULL WHERE id=? AND status IN ('PAUSED','PAUSE_REQUESTED') AND cancel_requested=0",
+                                (status, now, now, run_id))
             if result.rowcount == 0:
                 raise ServiceError("A simulação não está pausada ou já foi cancelada.", 409, code="LAB_RESUME_INVALID_STATE")
 

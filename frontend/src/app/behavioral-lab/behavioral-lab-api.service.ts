@@ -37,7 +37,9 @@ export interface RunResult {repetitions_completed?:number;repetitions_planned?:n
 export interface LabRun {id:string;status:'QUEUED'|'RUNNING'|'PAUSE_REQUESTED'|'PAUSED'|'COMPLETED'|'FAILED'|'CANCELLED'|'INTERRUPTED';mode:'bridge'|'demo';
   configuration:SimulationConfiguration;snapshot:{environment:Environment;society:Society;agents:SyntheticAgent[]};
   completed:number;total:number;cancel_requested:boolean;pause_requested:boolean;created_at:string;updated_at:string;result:RunResult|null;
-  error_code:string|null;events?:LabEvent[]}
+  error_code:string|null;error_reason?:string|null;failure_stage?:string|null;
+  started_at?:string|null;finished_at?:string|null;paused_at?:string|null;elapsed_seconds?:number|null;
+  events?:LabEvent[]}
 
 @Injectable({providedIn:'root'})
 export class BehavioralLabApiService {

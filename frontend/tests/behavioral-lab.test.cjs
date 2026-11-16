@@ -119,3 +119,32 @@ test('Pausa, retomada e reset de parâmetros estão conectados ao backend',()=>{
   assert.ok(controller.includes('defaultSimulationConfiguration()'));
   assert.ok(controller.includes('this.configuration?.demo_available'));
 });
+
+test('Mapa reposicionável responde a pointer e teclado, conserva coordenadas e permite restaurar layout',()=>{
+  const view=read('src/app/behavioral-lab/behavioral-lab-page.component.html');
+  const logic=read('src/app/behavioral-lab/behavioral-lab-page.component.ts');
+  const style=read('src/behavioral-lab.scss');
+  for(const binding of ['(pointerdown)="onNodePointerDown($event,n.id)"', '(pointermove)="onNodePointerMove($event)"',
+    '(pointerup)="onNodePointerEnd($event)"', '(keydown)="onNodeKeyDown($event,n.id)"', 'resetNodePositions()', 'Reorganizar mapa']) {
+    assert.ok(view.includes(binding),`Controle ausente: ${binding}`);
+  }
+  assert.ok(logic.includes('getScreenCTM()'), 'Transformação deve respeitar viewBox e redimensionamento');
+  assert.ok(logic.includes('matrixTransform(matrix.inverse())'), 'Não usar coordenadas brutas do mouse');
+  assert.ok(logic.includes('behavior:network-layout:v1:'), 'Persistir layout por sociedade no navegador');
+  assert.ok(logic.includes('value.x/900') || logic.includes('x:Math.max(46,Math.min(854,x))/900'));
+  assert.ok(style.includes('touch-action:none'), 'Arraste em telas touch deve estar disponível');
+});
+
+test('Status e duração distinguem falha, conclusão, andamento e pausa',()=>{
+  const view=read('src/app/behavioral-lab/behavioral-lab-page.component.html');
+  const logic=read('src/app/behavioral-lab/behavioral-lab-page.component.ts');
+  const api=read('src/app/behavioral-lab/behavioral-lab-api.service.ts');
+  for(const token of ['lab-run-state', 'Tempo de execução:', 'runStateDescription(run)', 'Finalizada:', 'Iniciada:', 'run.failure_stage','run.error_code']){
+    assert.ok(view.includes(token),`Diagnóstico ausente: ${token}`);
+  }
+  for(const status of ['QUEUED', 'RUNNING', 'COMPLETED', 'FAILED', 'PAUSED', 'INTERRUPTED']){
+    assert.ok(logic.includes(`case '${status}'`),`Descrição ausente: ${status}`);
+  }
+  assert.ok(api.includes('elapsed_seconds?:number|null'));
+  assert.ok(api.includes('error_reason?:string|null'));
+});

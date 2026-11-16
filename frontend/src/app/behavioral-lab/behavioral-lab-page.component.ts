@@ -21,6 +21,12 @@ export class BehavioralLabPageComponent implements OnInit, OnDestroy {
   private graphCacheIndex=new Map<string,GraphNode>();
   private edgeCacheKey='';
   private edgeCache:GraphEdge[]=[];
+  // Coordenadas são normalizadas, por sociedade, e não dependem da tela física.
+  // O layout é preferência visual local, não altera o resultado do modelo.
+  private readonly layoutCache=new Map<string,Record<string,{x:number;y:number}>>();
+  private layoutVersion=0;
+  private dragState:{agentId:string;pointerId:number;originX:number;originY:number}|null=null;
+  elapsedSeconds:number|null=null;
   tab:Tab='painel';
   showAdvanced=false;selectedRepetition=1;followLive=true;playing=false;feedFilter:'all'|'conversations'|'environment'='all';filterSelectedAgent=false;
   sampleType:'comunidade'|'mercado'|'organizacao'='comunidade';
@@ -71,6 +77,13 @@ export class BehavioralLabPageComponent implements OnInit, OnDestroy {
     this.refresh();
     // Polling curto apenas enquanto houver execução; a API retorna snapshots auditáveis.
     this.subscriptions.add(interval(1600).subscribe(()=>this.poll()));
+    // Incremento visual entre consultas: os valores oficiais são calculados
+    // pelo backend, que exclui o período efetivamente pausado.
+    this.subscriptions.add(interval(1000).subscribe(()=>{
+      if(this.selectedRun && ['RUNNING','PAUSE_REQUESTED'].includes(this.selectedRun.status) && this.elapsedSeconds!==null){
+        this.elapsedSeconds+=1;this.cdr.markForCheck();
+      }
+    }));
     this.subscriptions.add(interval(1400).subscribe(()=>{if(this.playing)this.nextReplay();}));
     this.subscriptions.add(interval(3500).subscribe(()=>{if(this.selectedExperiment&&['QUEUED','RUNNING'].includes(this.selectedExperiment.status))this.loadExperiments();}));
   }
@@ -102,7 +115,7 @@ export class BehavioralLabPageComponent implements OnInit, OnDestroy {
     this.pollBusy=true;
     this.subscriptions.add(this.api.run(this.selectedRun.id).subscribe({next:run=>{
       const last=this.selectedRun?.status;
-      this.selectedRun=run;
+      this.selectedRun=run;this.elapsedSeconds=run.elapsed_seconds??null;
       if(this.followLive){this.selectedRepetition=this.maxAvailableRepetition();this.selectedRound=this.maxAvailableRound();}
       else if(this.selectedRound>this.maxAvailableRound())this.selectedRound=this.maxAvailableRound();
       this.pollBusy=false;this.cdr.markForCheck();
@@ -243,7 +256,7 @@ export class BehavioralLabPageComponent implements OnInit, OnDestroy {
     },error:err=>this.showError(err)}));
   }
 
-  clearActiveRun():void{this.selectedRun=null;this.selectedRepetition=1;this.selectedRound=1;this.selectedAgentId='';this.playing=false;this.followLive=false;}
+  clearActiveRun():void{this.elapsedSeconds=null;this.selectedRun=null;this.selectedRepetition=1;this.selectedRound=1;this.selectedAgentId='';this.playing=false;this.followLive=false;}
   resetSimulationConfiguration():void {
     // O reset afeta apenas os campos de configuração e visualização locais.
     // Não apaga agentes, cenários, histórico ou um worker em execução.
@@ -300,15 +313,33 @@ export class BehavioralLabPageComponent implements OnInit, OnDestroy {
     if(this.sim.mode==='demo'&&!this.configuration?.demo_available){this.error='O modo demonstrativo só está disponível no ambiente local.';return;}
     if(this.busy)return;
     this.busy=true;this.subscriptions.add(this.api.start({...this.sim}).subscribe({next:run=>{
-      this.busy=false;this.selectedRun=run;this.selectedRound=1;this.selectedRepetition=1;this.followLive=true;this.playing=false;this.selectedAgentId='';this.notice='Simulação iniciada. Acompanhe as reações em tempo real.';this.cdr.markForCheck();
+      this.busy=false;this.selectedRun=run;this.elapsedSeconds=run.elapsed_seconds??null;this.selectedRound=1;this.selectedRepetition=1;this.followLive=true;this.playing=false;this.selectedAgentId='';this.notice='Simulação iniciada. Acompanhe as reações em tempo real.';this.cdr.markForCheck();
       this.api.runs().subscribe(rows=>{this.runs=rows;this.cdr.markForCheck();});this.poll();
     },error:err=>this.showError(err)}));
   }
   cancel():void{if(!this.selectedRun)return;this.api.cancel(this.selectedRun.id).subscribe({next:()=>{this.notice='Cancelamento solicitado.';this.cdr.markForCheck();},error:err=>this.showError(err)});}
-  openRun(id:string):void{this.api.run(id).subscribe({next:run=>{this.selectedRun=run;this.driftResult=null;this.api.calibrations(id).subscribe({next:rows=>{this.calibrations=rows;this.cdr.markForCheck();},error:()=>{this.calibrations=[];}});this.selectedRepetition=this.maxAvailableRepetition();this.selectedRound=this.maxAvailableRound();this.followLive=['QUEUED','RUNNING','PAUSE_REQUESTED','PAUSED'].includes(run.status);this.playing=false;this.selectedAgentId='';this.error='';this.cdr.markForCheck();},error:err=>this.showError(err)});}
+  openRun(id:string):void{this.api.run(id).subscribe({next:run=>{this.selectedRun=run;this.elapsedSeconds=run.elapsed_seconds??null;this.driftResult=null;this.api.calibrations(id).subscribe({next:rows=>{this.calibrations=rows;this.cdr.markForCheck();},error:()=>{this.calibrations=[];}});this.selectedRepetition=this.maxAvailableRepetition();this.selectedRound=this.maxAvailableRound();this.followLive=['QUEUED','RUNNING','PAUSE_REQUESTED','PAUSED'].includes(run.status);this.playing=false;this.selectedAgentId='';this.error='';this.cdr.markForCheck();},error:err=>this.showError(err)});}
   openResult(id:string):void{this.openRun(id);this.tab='resultados';}
   showRunStatus(status:string):string{return ({QUEUED:'Na fila',RUNNING:'Executando',PAUSE_REQUESTED:'Pausa solicitada',PAUSED:'Pausada',COMPLETED:'Concluída',FAILED:'Falhou',CANCELLED:'Cancelada',INTERRUPTED:'Interrompida'} as Record<string,string>)[status]||status;}
   progress():number{return this.selectedRun&&this.selectedRun.total?Math.round(100*this.selectedRun.completed/this.selectedRun.total):0;}
+  formatElapsed(seconds:number|null|undefined):string{
+    if(seconds===null||seconds===undefined)return 'Indisponível para execuções antigas';
+    const value=Math.max(0,Math.floor(seconds));
+    return `${Math.floor(value/3600).toString().padStart(2,'0')}:${Math.floor(value%3600/60).toString().padStart(2,'0')}:${(value%60).toString().padStart(2,'0')}`;
+  }
+  runStateDescription(run:LabRun):string {
+    switch(run.status){
+      case 'QUEUED': return 'Aguardando worker disponível. Nenhuma reação foi processada ainda.';
+      case 'RUNNING': return `Executando ${run.completed} de ${run.total} reações. O contador acompanha o tempo efetivo de execução.`;
+      case 'PAUSE_REQUESTED': return 'Pausa solicitada: a geração atual termina antes da suspensão efetiva.';
+      case 'PAUSED': return 'Execução pausada e histórico preservado. O cronômetro está parado.';
+      case 'COMPLETED': return `Todas as ${run.total} reações foram processadas; a simulação foi concluída.`;
+      case 'FAILED': return run.error_reason||'Falha não classificada. Consulte o log técnico pelo ID da execução.';
+      case 'CANCELLED': return 'A execução foi cancelada. Resultados parciais podem estar disponíveis.';
+      case 'INTERRUPTED': return run.error_reason||'Execução interrompida antes da conclusão.';
+      default: return 'Estado da simulação indisponível.';
+    }
+  }
   maxAvailableRepetition():number{
     return Math.max(1,...(this.selectedRun?.events||[]).filter(e=>e.event_type==='NETWORK').map(e=>Number(e.payload['repetition']||1)));
   }
@@ -366,7 +397,8 @@ export class BehavioralLabPageComponent implements OnInit, OnDestroy {
     const agents=this.selectedRun?.snapshot.agents||this.selectedSocietyAgents();
     const events=this.selectedRun?.events||[];
     const key=[this.selectedRun?.id||'preview',this.selectedRun?.events?.length||0,
-      this.selectedRepetition,this.selectedRound,agents.map(agent=>agent.id).join(',')].join(':');
+      this.selectedRepetition,this.selectedRound,this.layoutKey(),this.layoutVersion,
+      agents.map(agent=>agent.id).join(',')].join(':');
     if(key===this.graphCacheKey)return this.graphCacheNodes;
     const reactions=events.filter(e=>e.event_type==='REACTION'&&e.round<=this.selectedRound&&Number(e.payload['repetition']||1)===this.selectedRepetition);
     const byId=new Map<string,LabEvent>();for(const event of reactions)byId.set(event.agent_id||'',event);
@@ -395,12 +427,85 @@ export class BehavioralLabPageComponent implements OnInit, OnDestroy {
         angle=2*Math.PI*withinGroup/Math.max(count,1)-Math.PI/2;
       }
       const event=byId.get(agent.id);
+      const savedPosition=this.getLayout()[agent.id];
       return {id:agent.id,name:agent.name,group:agent.group,type:agent.entity_type,
-        x:Math.round(groupX+radius*Math.cos(angle)),y:Math.round(groupY+radius*.77*Math.sin(angle)),
+        x:savedPosition?Math.round(savedPosition.x*900):Math.round(groupX+radius*Math.cos(angle)),
+        y:savedPosition?Math.round(savedPosition.y*435):Math.round(groupY+radius*.77*Math.sin(angle)),
         stance:event?Number(event.payload['stance']):agent.initial_stance,hasReaction:!!event};
     });
     this.graphCacheKey=key;this.graphCacheNodes=nodes;this.graphCacheIndex=new Map(nodes.map(node=>[node.id,node]));
     return nodes;
+  }
+  private layoutKey():string{
+    return this.selectedRun?.snapshot.society.id||this.sim.society_id;
+  }
+  private getLayout():Record<string,{x:number;y:number}>{
+    const key=this.layoutKey();
+    if(!key)return {};
+    if(!this.layoutCache.has(key)){
+      let result:Record<string,{x:number;y:number}>={};
+      try {
+        const raw=localStorage.getItem(`behavior:network-layout:v1:${key}`);
+        const input=raw?JSON.parse(raw):{};
+        if(input&&typeof input==='object'&&!Array.isArray(input)){
+          for(const [id,point] of Object.entries(input)){
+            const value=point as {x?:number;y?:number};
+            if(/^[a-f0-9]{32}$/.test(id)&&Number.isFinite(value?.x)&&Number.isFinite(value?.y)&&
+              value.x !== undefined&&value.x>=0&&value.x<=1&&value.y !== undefined&&value.y>=0&&value.y<=1)result[id]={x:value.x!,y:value.y!};
+          }
+        }
+      }catch{ /* Preferências indisponíveis não bloqueiam a simulação. */ }
+      this.layoutCache.set(key,result);
+    }
+    return this.layoutCache.get(key)!;
+  }
+  private moveNode(agentId:string,x:number,y:number):void{
+    const key=this.layoutKey();if(!key)return;
+    const layout=this.getLayout();
+    layout[agentId]={x:Math.max(46,Math.min(854,x))/900,y:Math.max(42,Math.min(350,y))/435};
+    this.layoutVersion++;
+    // O armazenamento é restrito a IDs sintéticos e coordenadas.
+    try{localStorage.setItem(`behavior:network-layout:v1:${key}`,JSON.stringify(layout));}
+    catch{ /* Desabilitar cookies/armazenamento não impede arrastar nesta sessão. */ }
+  }
+  onNodePointerDown(event:PointerEvent,id:string):void{
+    if(event.button!==0||this.dragState)return;
+    const current=event.currentTarget as SVGGElement;
+    this.dragState={agentId:id,pointerId:event.pointerId,originX:event.clientX,originY:event.clientY};
+    current.setPointerCapture(event.pointerId);
+    event.preventDefault();
+    this.selectedAgentId=id;
+  }
+  onNodePointerMove(event:PointerEvent):void{
+    const state=this.dragState;
+    if(!state||state.pointerId!==event.pointerId)return;
+    const svg=(event.currentTarget as SVGGElement).ownerSVGElement;
+    const matrix=svg?.getScreenCTM();
+    if(!svg||!matrix)return;
+    const point=svg.createSVGPoint();point.x=event.clientX;point.y=event.clientY;
+    const next=point.matrixTransform(matrix.inverse());
+    if(Number.isFinite(next.x)&&Number.isFinite(next.y))this.moveNode(state.agentId,next.x,next.y);
+  }
+  onNodePointerEnd(event:PointerEvent):void{
+    if(!this.dragState||this.dragState.pointerId!==event.pointerId)return;
+    const current=event.currentTarget as SVGGElement;
+    if(current.hasPointerCapture(event.pointerId))current.releasePointerCapture(event.pointerId);
+    this.dragState=null;
+  }
+  onNodeKeyDown(event:KeyboardEvent,id:string):void{
+    const moves:Record<string,[number,number]>={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0]};
+    const delta=moves[event.key];if(!delta)return;
+    event.preventDefault();this.selectedAgentId=id;
+    const node=this.node(id);if(!node)return;
+    const step=event.shiftKey?20:8;
+    this.moveNode(id,node.x+delta[0]*step,node.y+delta[1]*step);
+  }
+  resetNodePositions():void{
+    const key=this.layoutKey();if(!key)return;
+    if(!confirm('Restaurar a distribuição automática dos agentes neste mapa?'))return;
+    this.layoutCache.set(key,{});this.layoutVersion++;
+    try{localStorage.removeItem(`behavior:network-layout:v1:${key}`);}catch{}
+    this.notice='Posições automáticas restauradas. O histórico da simulação não foi alterado.';
   }
   selectedSocietyAgents():SyntheticAgent[]{const society=this.societies.find(s=>s.id===this.sim.society_id);return society? society.agent_ids.map(id=>this.agents.find(a=>a.id===id)).filter((a):a is SyntheticAgent=>!!a):[];}
   graphEdges():GraphEdge[]{

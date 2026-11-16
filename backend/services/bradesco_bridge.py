@@ -305,13 +305,17 @@ class BradescoBridgeClient:
             )
             raise self._classify_error(exc, operation) from None
 
-    def generate_text_with_metadata(self, payload: str, *, max_tokens: int) -> TextGenerationResult:
+    def generate_text_with_metadata(self, payload: str, *, max_tokens: int, temperature: float | None = None) -> TextGenerationResult:
         """Executa geração e preserva contadores reais apenas quando expostos pelo gateway."""
+        # Temperatura por requisição: usada pelo Behavior. Outros módulos
+        # continuam utilizando o valor global, mantendo compatibilidade.
+        if temperature is not None and (isinstance(temperature, bool) or not isinstance(temperature, (float, int)) or not 0 <= temperature <= 2):
+            raise BradescoBridgeError("bradesco_temperatura_invalida", "Temperatura da IA deve estar entre 0 e 2.", 422)
         module = self._load()
         function = getattr(module, "text_generator")
         parameters = {
             "deployment_name": self.settings.bradesco_text_model,
-            "temperature": self.settings.bradesco_text_temperature,
+            "temperature": self.settings.bradesco_text_temperature if temperature is None else float(temperature),
             "max_tokens": min(max_tokens, self.settings.bradesco_text_max_tokens),
             "async_mode": False,
             "stream": False,

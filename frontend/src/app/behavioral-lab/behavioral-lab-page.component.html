@@ -22,7 +22,7 @@
     </section>
 
     <div class="lab-status-line">
-      <span class="lab-status-item"><span class="status-dot" [class.ok]="configuration?.bridge_available"></span> IA corporativa: {{configuration?.bridge_available?'configurada':'não configurada'}}</span>
+      <span class="lab-status-item"><span class="status-dot" [class.ok]="configuration?.bridge_available"></span> IA corporativa: {{configuration?.bridge_available?'configurada (acesso não testado)':'não configurada'}}</span>
       <span class="lab-status-item"><span class="status-dot" [class.ok]="configuration?.demo_available"></span> Demonstração: {{configuration?.demo_available?'disponível':'desabilitada'}}</span>
       <span class="lab-status-note">Hipóteses simuladas, não previsões verificadas sobre pessoas reais.</span>
     </div>
@@ -250,6 +250,7 @@
           <div class="lab-panel lab-stage">
             <div class="lab-stage-toolbar"><div><span class="eyebrow">02 · REDE EM TEMPO REAL</span><h2>Mapa de interações <span class="lab-live-dot" [class.active]="selectedRun?.status==='RUNNING'"></span></h2></div>
               <div class="lab-stage-badges"><span>{{selectedRun?showRunStatus(selectedRun.status):'Prévia da sociedade'}}</span><span>{{selectedRun?.mode==='bridge'?'IA':selectedRun?.mode==='demo'?'DEMO':'SEM EXECUÇÃO'}}</span></div></div>
+            <div class="lab-map-tools"><small>Arraste os agentes livremente ou use as setas do teclado. Posições preservadas neste navegador.</small><button type="button" (click)="resetNodePositions()" [disabled]="!graphNodes().length">Reorganizar mapa</button></div>
             <div class="lab-world-change"> <span class="lab-world-bullet">◉</span><span><strong>Mundo atual</strong><small>{{currentEnvironment()?.context?.slice(0,120)||'Selecione um cenário para iniciar'}}</small></span>
                 @if(activeEnvironmentEvents().length){<span class="lab-world-alert">{{activeEnvironmentEvents().length}} mudança(s) até agora</span>}
               </div>
@@ -265,7 +266,10 @@
                     }
                   }
                   @for(n of graphNodes();track n.id){
-                    <g (click)="selectNode(n.id)" (keydown.enter)="selectNode(n.id)" tabindex="0" role="button" [attr.aria-label]="n.name + ', posição ' + n.stance" class="lab-network-node" [class.selected]="selectedAgentId===n.id">
+                    <g (click)="selectNode(n.id)" (keydown.enter)="selectNode(n.id)" (keydown.space)="selectNode(n.id)" (keydown)="onNodeKeyDown($event,n.id)"
+                      (pointerdown)="onNodePointerDown($event,n.id)" (pointermove)="onNodePointerMove($event)"
+                      (pointerup)="onNodePointerEnd($event)" (pointercancel)="onNodePointerEnd($event)"
+                      tabindex="0" role="button" [attr.aria-label]="n.name + ', posição ' + n.stance + '. Arraste ou use as setas para mover'" class="lab-network-node" [class.selected]="selectedAgentId===n.id">
                       <circle [attr.cx]="n.x" [attr.cy]="n.y" r="29" [attr.fill]="n.hasReaction?(stanceClass(n.stance)==='support'?'#e1f5ec':stanceClass(n.stance)==='undecided'?'#fff1d9':'#fde4e9'):'#edf2f6'" stroke="#fff" stroke-width="4" filter="url(#lab-node-shadow)" />
                       <circle [attr.cx]="n.x" [attr.cy]="n.y" r="25" fill="none" [attr.stroke]="stanceClass(n.stance)==='support'?'#2b977b':stanceClass(n.stance)==='undecided'?'#d29a32':'#c24c67'" [attr.stroke-width]="selectedAgentId===n.id?3:1.5" opacity=".75" />
                       <text [attr.x]="n.x" [attr.y]="n.y+5" text-anchor="middle" font-size="13" font-weight="800" [attr.fill]="stanceClass(n.stance)==='support'?'#1f6657':stanceClass(n.stance)==='undecided'?'#8a631e':'#a32f4e'">{{n.type==='AGENTE_IA'?'IA':n.name.slice(0,2).toUpperCase()}}</text>
@@ -281,6 +285,22 @@
             </div>
             <div class="lab-stage-bottom"><div class="lab-progress-label"><strong>{{selectedRun?'Simulação '+selectedRepetition+' · Rodada '+selectedRound+' / '+selectedRun.configuration.rounds:'Aguardando simulação'}}</strong><span>{{selectedRun?.completed??0}} / {{selectedRun?.total??0}} reações</span></div>
               <div class="lab-progress"><span [style.width.%]="progress()"></span></div>
+              @if(selectedRun;as run){
+                <section class="lab-run-state" role="status" [class.is-running]="['QUEUED','RUNNING','PAUSE_REQUESTED'].includes(run.status)"
+                  [class.is-complete]="run.status==='COMPLETED'" [class.is-failed]="['FAILED','INTERRUPTED'].includes(run.status)">
+                  <div class="lab-run-state-head"><strong>{{showRunStatus(run.status)}}</strong><span class="lab-run-clock">Tempo de execução: {{formatElapsed(elapsedSeconds)}}</span></div>
+                  <p>{{runStateDescription(run)}}</p>
+                  <div class="lab-run-state-times">
+                    <span>Solicitada: {{run.created_at | date:'dd/MM/yyyy HH:mm:ss'}}</span>
+                    @if(run.started_at){<span>Iniciada: {{run.started_at | date:'dd/MM/yyyy HH:mm:ss'}}</span>}
+                    @if(run.finished_at){<span>Finalizada: {{run.finished_at | date:'dd/MM/yyyy HH:mm:ss'}}</span>}
+                    @if(run.paused_at){<span>Pausada desde: {{run.paused_at | date:'dd/MM/yyyy HH:mm:ss'}}</span>}
+                  </div>
+                  @if(['FAILED','INTERRUPTED'].includes(run.status)){
+                    <div class="lab-run-diagnostic"><span>Etapa: {{run.failure_stage||'Não identificada'}}</span><span>Código: {{run.error_code||'LAB_EXECUTION_ERROR'}}</span><span>Execução: {{run.id.slice(0,12)}}</span></div>
+                  }
+                </section>
+              }
               @if(selectedRun){<div class="lab-replay-control"><button type="button" title="Rodada anterior" aria-label="Rodada anterior" (click)="previousReplay()">❮</button>
                 <button type="button" class="lab-play-button" (click)="togglePlayback()">{{playing?'⏸ Pausar replay':'▶ Replay'}}</button>
                 <label for="round-replay">Reproduzir evolução</label><input id="round-replay" type="range" min="1" [max]="maxAvailableRound()" step="1" [ngModel]="selectedRound" (ngModelChange)="setRound($event)"><span>{{selectedRound}}/{{maxAvailableRound()}}</span>
@@ -323,18 +343,18 @@
               @if(event.event_type==='REACTION'){
                 <button type="button" class="lab-chat-message lab-chat-reaction" (click)="inspectEvent(event)" [class.active]="selectedConversationSequence===event.sequence">
                   <span class="lab-chat-avatar" [class]="stanceClass(event.payload['stance'])">{{event.payload['agent_name']?.slice(0,2)}}</span>
-                  <span class="lab-chat-content"><span class="lab-chat-meta"><b>{{event.payload['agent_name']}}</b><small>Reação · R{{event.round}}</small></span>
+                  <span class="lab-chat-content"><span class="lab-chat-meta"><b>{{event.payload['agent_name']}}</b><small>Reação · R{{event.round}} · {{event.created_at | date:'HH:mm:ss'}}</small></span>
                     <span class="lab-chat-bubble">{{event.payload['message']}}</span><span class="lab-chat-foot"><em>{{event.payload['action']}}</em><strong [class]="stanceClass(event.payload['stance'])">{{event.payload['stance']}}/100</strong></span></span>
                 </button>
               }@else if(event.event_type==='CONVERSATION'){
                 <button type="button" class="lab-chat-message lab-chat-dialogue" [class.active]="selectedConversationSequence===event.sequence" (click)="inspectEvent(event)">
                   <span class="lab-chat-avatar neutral">→</span><span class="lab-chat-content"><span class="lab-chat-meta"><b>{{messageTo(event.agent_id)}} → {{messageTo(event.peer_id)}}</b>
-                    <small>Mensagem dirigida · R{{event.round}}</small></span>
+                    <small>Mensagem dirigida · R{{event.round}} · {{event.created_at | date:'HH:mm:ss'}}</small></span>
                     <span class="lab-chat-bubble">{{event.payload['message']}}</span><span class="lab-chat-foot"><em>Resposta possível em rodada posterior</em></span></span>
                 </button>
               }@else if(event.event_type==='INTERACTION'){
                 <button type="button" class="lab-chat-message lab-chat-interaction" (click)="inspectEvent(event)">
-                  <span class="lab-chat-avatar neutral">↗</span><span class="lab-chat-content"><span class="lab-chat-meta"><b>{{messageTo(event.agent_id)}}</b><small>Compartilhada com {{messageTo(event.peer_id)}} · R{{event.round}}</small></span>
+                  <span class="lab-chat-avatar neutral">↗</span><span class="lab-chat-content"><span class="lab-chat-meta"><b>{{messageTo(event.agent_id)}}</b><small>Compartilhada com {{messageTo(event.peer_id)}} · R{{event.round}} · {{event.created_at | date:'HH:mm:ss'}}</small></span>
                     <span class="lab-chat-bubble">{{event.payload['message']}}</span><span class="lab-chat-foot"><em>Mensagem recebida da rodada anterior</em></span></span>
                 </button>
               }@else{
@@ -368,13 +388,18 @@
         <div class="lab-toolbar">@if(selectedRun){<button type="button" (click)="cloneRun()">Duplicar configuração</button><button type="button" (click)="downloadRun('json')">Exportar JSON</button><button type="button" (click)="downloadRun('csv')">Exportar CSV</button><button type="button" (click)="downloadReport()">Relatório Markdown</button>}</div></div>
       <div class="lab-results-layout">
         <div class="lab-panel lab-result-history"><div class="panel-head"><div><span class="eyebrow">HISTÓRICO DE RODADAS</span><h2>Experimentos</h2></div></div>
-          @for(run of runs;track run.id){<button type="button" class="lab-result-item" (click)="openRun(run.id)" [class.selected]="selectedRun?.id===run.id"><strong>{{run.id.slice(0,10)}}</strong><small>{{run.mode==='bridge'?'IA corporativa':'Demonstrativo'}} · {{showRunStatus(run.status)}}</small><span>{{run.completed}}/{{run.total}} reações</span></button>}
+          @for(run of runs;track run.id){<button type="button" class="lab-result-item" (click)="openRun(run.id)" [class.selected]="selectedRun?.id===run.id"><strong>{{run.id.slice(0,10)}}</strong><small>{{run.mode==='bridge'?'IA corporativa':'Demonstrativo'}} · {{showRunStatus(run.status)}}</small><span>{{run.completed}}/{{run.total}} reações</span><small>{{formatElapsed(run.elapsed_seconds)}}</small></button>}
           @if(!runs.length){<p class="lab-empty">Sem experimentos salvos.</p>}
         </div>
         <div class="lab-result-content">
           @if(selectedRun;as run){
             <div class="lab-panel lab-result-overview"><div class="panel-head"><div><span class="eyebrow">RESULTADO SINTÉTICO</span><h2>{{run.snapshot.environment.name}}</h2></div><span class="lab-tag">{{showRunStatus(run.status)}}</span></div>
-              <div class="lab-run-metadata"><span>Execução {{run.id.slice(0,12)}}</span><span>{{run.mode==='bridge'?'IA corporativa':'Regras demonstrativas'}}</span><span>Semente {{run.configuration.seed}}</span><span>{{run.configuration.rounds}} rodadas previstas</span></div>
+              <div class="lab-run-metadata"><span>Execução {{run.id.slice(0,12)}}</span><span>{{run.mode==='bridge'?'IA corporativa':'Regras demonstrativas'}}</span><span>Semente {{run.configuration.seed}}</span><span>{{run.configuration.rounds}} rodadas previstas</span><span>Tempo: {{formatElapsed(run.elapsed_seconds)}}</span>
+                @if(run.finished_at){<span>Finalizada: {{run.finished_at | date:'dd/MM/yyyy HH:mm:ss'}}</span>}
+              </div>
+              <div class="lab-result-run-state"><strong>{{showRunStatus(run.status)}}</strong><p>{{runStateDescription(run)}}</p>
+                @if(['FAILED','INTERRUPTED'].includes(run.status)){<small>{{run.error_code}} · Etapa: {{run.failure_stage||'Não identificada'}}</small>}
+              </div>
               @if(run.result?.final;as final){<div class="lab-results-kpis"><div><span>{{run.snapshot.environment.high_label||'ALTA'}}</span><strong class="support">{{final.support}}</strong><small>Observações sintéticas ≥ {{run.snapshot.environment.high_threshold}}</small></div><div><span>{{run.snapshot.environment.middle_label||'MÉDIA'}}</span><strong class="undecided">{{final.undecided}}</strong><small>Observações sintéticas {{run.snapshot.environment.low_threshold}}–{{(run.snapshot.environment.high_threshold)-1}}</small></div><div><span>{{run.snapshot.environment.low_label||'BAIXA'}}</span><strong class="resistance">{{final.resistance}}</strong><small>Observações sintéticas &lt; {{run.snapshot.environment.low_threshold}}</small></div><div><span>INDICADOR MÉDIO</span><strong>{{final.mean_stance | number:'1.1-1'}}</strong><small>{{run.result?.repetitions_completed||1}} execução(ões) · escala 0–100</small></div></div>}
               @else{<div class="lab-empty">A consolidação será apresentada quando houver reações processadas.</div>}
             </div>
@@ -420,7 +445,7 @@
               <p>{{run.result?.method_note||'O experimento ainda não foi concluído.'}}</p>
               <dl><div><dt>Reações registradas</dt><dd>{{run.completed}}</dd></div><div><dt>Conexões de rede</dt><dd>{{run.result?.network_edges??'—'}}</dd></div><div><dt>Eventos de interação</dt><dd>{{eventsCount('INTERACTION')}}</dd></div><div><dt>Choques registrados</dt><dd>{{eventsCount('SHOCK')}}</dd></div><div><dt>Hash do prompt</dt><dd class="mono">{{run.result?.prompt_sha256?.slice(0,16)||'Não aplicável'}}</dd></div><div><dt>Hash do cenário</dt><dd class="mono">{{run.result?.snapshot_sha256?.slice(0,16)||'Aguardando'}}</dd></div><div><dt>Versão do motor</dt><dd>{{run.result?.engine_version||'Legado'}}</dd></div><div><dt>Modelo configurado</dt><dd>{{run.result?.configured_model||'Não disponível'}}</dd></div><div><dt>Tokens reais de saída</dt><dd>{{run.result?.actual_token_usage?.output_tokens??'Não informado pela Bridge'}}</dd></div></dl>
               <p class="lab-limitation">Não há amostragem representativa, validação causal ou intervalos de confiança calibrados. Exige validação com observações reais e revisão humana antes de orientar decisões bancárias ou jurídicas.</p>
-              @if(run.error_code){<p class="lab-failure">Execução não concluída · código técnico: {{run.error_code}}. Nenhum resultado foi inventado para preencher eventos ausentes.</p>}
+              @if(run.error_code){<p class="lab-failure">{{runStateDescription(run)}} Código técnico: {{run.error_code}}. Nenhum resultado foi inventado para preencher eventos ausentes.</p>}
             </div>
           }@else{<div class="lab-panel lab-empty">Execute uma simulação para visualizar resultados e exportar o histórico.</div>}
         </div>

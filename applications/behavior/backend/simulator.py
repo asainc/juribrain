@@ -21,10 +21,18 @@ from statistics import mean, pstdev
 from pydantic import ValidationError
 from applications.behavior.backend.contracts import Reaction
 from applications.behavior.backend.repository import LabRepository
-from backend.services.bradesco_bridge import BradescoBridgeClient
+from backend.services.bradesco_bridge import BradescoBridgeClient, BradescoBridgeError
 
 logger = logging.getLogger("behavioral_lab")
 PROMPT_PATH = Path(__file__).resolve().parents[3] / "prompts" / "behavioral_lab" / "reaction.system.md"
+
+
+class SimulationValidationError(ValueError):
+    """Falha previsível de validação, com código estável e sem saída crua da IA."""
+
+    def __init__(self, code: str):
+        self.code = code
+        super().__init__(code)
 
 
 class LabSimulator:
@@ -163,16 +171,16 @@ class LabSimulator:
                 if value is not None:
                     if kind == "number":
                         if isinstance(value, bool) or not isinstance(value, (int, float)) or not definition["minimum"] <= value <= definition["maximum"]:
-                            raise ValueError(f"Métrica numérica inválida: {key}")
+                            raise SimulationValidationError("LAB_METRIC_INVALID")
                     elif kind == "boolean":
                         if not isinstance(value, bool):
-                            raise ValueError(f"Métrica booleana inválida: {key}")
+                            raise SimulationValidationError("LAB_METRIC_INVALID")
                     elif not isinstance(value, str) or value not in definition["categories"]:
-                        raise ValueError(f"Métrica categórica inválida: {key}")
+                        raise SimulationValidationError("LAB_METRIC_INVALID")
             result[key] = value
         unexpected = set(reaction.metrics) - {metric["key"] for metric in environment.get("metrics", [])}
         if unexpected:
-            raise ValueError("Modelo retornou métricas não declaradas no contrato.")
+            raise SimulationValidationError("LAB_METRIC_INVALID")
         return result
 
     @staticmethod
@@ -416,9 +424,9 @@ class LabSimulator:
                             return
                         metrics = self.evaluate_metrics(reaction, current_environment, config["mode"])
                         if not current_environment.get('enable_agent_actions') and reaction.environment_updates:
-                            raise ValueError('Ações ambientais não foram habilitadas neste cenário.')
+                            raise SimulationValidationError("LAB_ACTION_INVALID")
                         if len(reaction.environment_updates) > 4:
-                            raise ValueError('Número de ações ambientais excedido.')
+                            raise SimulationValidationError("LAB_ACTION_INVALID")
                         value = {"agent_id": agent["id"], "agent_name": agent["name"], "round": round_index,
                                  "repetition": repetition, **reaction.model_dump(), "metrics": metrics,
                                  "token_usage": usage, "influenced_by": [p["id"] for p in peers]}
@@ -450,7 +458,7 @@ class LabSimulator:
                         for reaction_value in current.values():
                             for key, new_value in reaction_value.get('environment_updates', {}).items():
                                 if key not in allowed_effects or new_value not in allowed_effects[key]:
-                                    raise ValueError('Agente propôs atualização fora da política do ambiente.')
+                                    raise SimulationValidationError("LAB_ACTION_INVALID")
                                 old_value = current_environment['variables'].get(key)
                                 current_environment['variables'][key] = new_value
                                 self.repository.append(run_id, round_index, 'AGENT_ACTION', {
@@ -487,9 +495,13 @@ class LabSimulator:
                                                     "repetitions": repetitions_count, "mode": config["mode"]})
         except Exception as exc:
             # Não registramos argumentos/prompt nem respostas da Bridge.
-            logger.error("lab_run_failed", extra={"run_id": run_id, "error_type": type(exc).__name__})
             candidate = getattr(exc, "code", "")
-            code = "MODEL_OUTPUT_INVALID" if isinstance(exc, ValueError) else (
-                candidate if isinstance(candidate, str) and re.fullmatch(r"[A-Za-z0-9_]{1,60}", candidate) else "LAB_EXECUTION_ERROR"
-            )
-            self.repository.transition(run_id, "FAILED", error_code=code)
+            code = (candidate if isinstance(candidate, str) and re.fullmatch(r"[A-Za-z0-9_]{1,60}", candidate)
+                    else "MODEL_OUTPUT_INVALID" if isinstance(exc, ValueError) else "LAB_EXECUTION_ERROR")
+            stage = ("CHAMADA_IA" if isinstance(exc, BradescoBridgeError) else
+                     "VALIDACAO_RESPOSTA" if isinstance(exc, ValueError) else "MOTOR_SIMULACAO")
+            # Nunca registrar a mensagem crua da exceção: pode incluir entrada,
+            # saída gerada, URL interna ou partes de uma credencial.
+            logger.error("lab_run_failed", extra={"run_id": run_id, "error_type": type(exc).__name__,
+                                                  "error_code": code, "stage": stage})
+            self.repository.transition(run_id, "FAILED", error_code=code, failure_stage=stage)

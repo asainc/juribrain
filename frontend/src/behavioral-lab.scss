@@ -259,3 +259,25 @@ app-behavioral-lab-page{display:block;min-width:0;background:#f3f5f7;color:#283c
 .lab-resume-button{color:#26644d;background:#edf8f2;border:1px solid #c7e5d4}
 .lab-reset-button{color:#536778;background:#f7f9fa;border:1px solid #dce4e9}
 @media(max-width:690px){.lab-chat-meta>small{text-align:left}.lab-execution-actions{grid-template-columns:1fr}}
+
+/* Mapa reposicionável: o SVG conserva viewBox, coordenadas proporcionais e
+   captura de ponteiro em dispositivos mouse/toque sem deslocar as colunas. */
+.lab-map-tools{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 16px;background:#f8fafb;border-top:1px solid #edf1f3;flex-wrap:wrap}
+.lab-map-tools small{font-size:.63rem;line-height:1.5;color:#718592;flex:1;min-width:180px}
+.lab-map-tools button{min-height:29px;font-size:.65rem;background:#fff;border:1px solid #dae2e8;color:#8e3650;border-radius:5px;padding:5px 9px}
+.lab-network-node{touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab}
+.lab-network-node:active{cursor:grabbing}
+.lab-network-node:focus-visible circle:first-of-type{stroke:#a12c4c;stroke-width:5}
+.lab-run-state{display:grid;gap:7px;border:1px solid #e0e7ec;border-left:4px solid #8595a0;background:#f8fafb;padding:11px 12px;border-radius:7px;color:#445b6b;min-width:0}
+.lab-run-state.is-running{border-left-color:#357ba6;background:#f4f9fd}
+.lab-run-state.is-complete{border-left-color:#2a9676;background:#f3fbf7}
+.lab-run-state.is-failed{border-left-color:#b93454;background:#fff4f6}
+.lab-run-state-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;font-size:.75rem}
+.lab-run-clock{font-variant-numeric:tabular-nums;font-weight:750;color:#334e61;font-family:Consolas,monospace}
+.lab-run-state p{font-size:.71rem;line-height:1.55;overflow-wrap:anywhere}
+.lab-run-state-times,.lab-run-diagnostic{display:flex;flex-wrap:wrap;gap:5px 12px;font-size:.61rem;color:#688090}
+.lab-run-diagnostic{padding-top:6px;border-top:1px solid #ead9df;color:#944258}
+.lab-result-run-state{margin:4px 20px 15px;border:1px solid #e3e9ee;border-radius:8px;padding:12px 14px;display:grid;gap:6px;font-size:.7rem;color:#4d6574}
+.lab-result-run-state p{line-height:1.5;overflow-wrap:anywhere}
+.lab-result-run-state small{color:#97405b}
+@media(max-width:690px){.lab-map-tools{align-items:stretch}.lab-map-tools button{width:100%}.lab-run-state-head{align-items:flex-start}}
