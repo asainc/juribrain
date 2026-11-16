@@ -1,5 +1,13 @@
 # Ecossistema Jurídico
 
+## Behavior — auditoria, sociedades e mundos configuráveis
+
+A cada nova reação, o Behavior registra posição anterior e atual, fatores observáveis (rede, acontecimentos, choques) e justificativa. No modo demonstrativo apresenta a decomposição da fórmula; na IA corporativa, exibe a justificativa declarada pelo modelo e informa que ela **não comprova causalidade**. Clique em uma fala ou agente no Observatory e expanda a auditoria. Registros são exportáveis em JSON, CSV e Markdown.
+
+A nova aba **Sociedades** permite gerenciar membros; a exclusão de agentes em sociedades é bloqueada para proteger a integridade. O editor de **Mundos** aceita qualquer tipo de contexto fictício, e os **Tipos de entidade** agora podem ser cadastrados no próprio Behavior. A **Checagem Externa** ganhou interface responsiva integrada ao design principal, usando apenas referências agregadas autorizadas.
+
+Guia completo: [`docs/BEHAVIOR_AUDITORIA_SOCIEDADES_MUNDOS_2026-11-16.md`](docs/BEHAVIOR_AUDITORIA_SOCIEDADES_MUNDOS_2026-11-16.md). O `.env` e `gpt_bradesco.py` continuam únicos na raiz do projeto. Não há necessidade de alterar a configuração das outras aplicações.
+
 ## Behavior — mapa editável, tempo e diagnóstico da IA corporativa
 
 O mapa do Behavior aceita arrastar agentes por mouse/toque ou usar as setas do teclado. As posições são coordenadas relativas e ficam salvas **neste navegador por sociedade**; **Reorganizar mapa** restaura a disposição padrão. A simulação não depende da posição visual do nó.

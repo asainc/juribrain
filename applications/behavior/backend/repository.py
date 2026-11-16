@@ -23,6 +23,13 @@ def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+DEFAULT_ENTITY_TYPES = (
+    ("CLIENTE", "Cliente"), ("PESSOA", "Pessoa"), ("EMPRESA", "Empresa"),
+    ("GOVERNO", "Entidade pública"), ("AGENTE_IA", "Agente de IA"),
+    ("ORGANIZACAO", "Organização / grupo"), ("OUTRO", "Outra entidade"),
+)
+
+
 class LabRepository:
     """CRUD validado, eventos append-only e estados atômicos de execução."""
 
@@ -34,6 +41,10 @@ class LabRepository:
         self._lock = threading.RLock()
         with self._db() as db:
             db.executescript("""
+                CREATE TABLE IF NOT EXISTS lab_entity_types (
+                    value TEXT PRIMARY KEY, label TEXT NOT NULL, is_builtin INTEGER NOT NULL DEFAULT 0,
+                    created_at TEXT NOT NULL
+                );
                 CREATE TABLE IF NOT EXISTS lab_agents (
                     id TEXT PRIMARY KEY, payload TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
                 );
@@ -73,6 +84,10 @@ class LabRepository:
                     FOREIGN KEY(run_id) REFERENCES lab_runs(id)
                 );
             """)
+            # Os tipos básicos são idempotentes e preservam nomes personalizados.
+            for value, label in DEFAULT_ENTITY_TYPES:
+                db.execute("INSERT OR IGNORE INTO lab_entity_types(value,label,is_builtin,created_at) VALUES (?,?,1,?)",
+                           (value, label, utc_now()))
             # Migração idempotente: bancos existentes não perdem histórico ou resultados.
             columns = {item["name"] for item in db.execute("PRAGMA table_info(lab_runs)")}
             if "pause_requested" not in columns:
@@ -110,6 +125,43 @@ class LabRepository:
             raise
         finally:
             db.close()
+
+    def list_entity_types(self) -> list[dict]:
+        """Devolve a lista persistente, comum ao editor e à importação CSV."""
+        with self._lock, self._db() as db:
+            rows = db.execute("SELECT value,label,is_builtin FROM lab_entity_types ORDER BY is_builtin DESC,label COLLATE NOCASE").fetchall()
+        return [{"value": r["value"], "label": r["label"], "is_builtin": bool(r["is_builtin"])} for r in rows]
+
+    def ensure_entity_type(self, value: str) -> None:
+        """Evita salvar agentes com categorias que não constam do catálogo."""
+        with self._lock, self._db() as db:
+            found = db.execute("SELECT 1 FROM lab_entity_types WHERE value=?", (value,)).fetchone()
+        if not found:
+            raise ServiceError("Tipo de entidade inexistente. Cadastre o tipo antes de utilizá-lo.",
+                               422, code="LAB_ENTITY_TYPE_UNKNOWN")
+
+    def save_entity_type(self, value: str, label: str) -> dict:
+        """Insere categoria customizada de forma atômica; rejeita identificadores duplicados."""
+        with self._lock, self._db() as db:
+            if db.execute("SELECT 1 FROM lab_entity_types WHERE value=?", (value,)).fetchone():
+                raise ServiceError("Este identificador de entidade já está cadastrado.", 409, code="LAB_ENTITY_TYPE_DUPLICATE")
+            db.execute("INSERT INTO lab_entity_types(value,label,is_builtin,created_at) VALUES (?,?,0,?)",
+                       (value, label.strip(), utc_now()))
+        return {"value": value, "label": label.strip(), "is_builtin": False}
+
+    def delete_entity_type(self, value: str) -> None:
+        """Preserva a rastreabilidade: um tipo em uso não pode ser excluído."""
+        with self._lock, self._db() as db:
+            row = db.execute("SELECT is_builtin FROM lab_entity_types WHERE value=?", (value,)).fetchone()
+            if not row:
+                raise ServiceError("Tipo de entidade não encontrado.", 404, code="LAB_ENTITY_TYPE_NOT_FOUND")
+            if row["is_builtin"]:
+                raise ServiceError("Tipos nativos não podem ser excluídos.", 409, code="LAB_ENTITY_TYPE_BUILTIN")
+            for agent in db.execute("SELECT payload FROM lab_agents"):
+                if json.loads(agent["payload"]).get("entity_type") == value:
+                    raise ServiceError("Há agentes usando este tipo. Altere seus perfis antes de excluir.",
+                                       409, code="LAB_ENTITY_TYPE_IN_USE")
+            db.execute("DELETE FROM lab_entity_types WHERE value=?", (value,))
 
     def list_items(self, kind: str) -> list[dict]:
         table = self.TABLES[kind]
@@ -182,6 +234,12 @@ class LabRepository:
     def delete_item(self, kind: str, item_id: str) -> None:
         table = self.TABLES[kind]
         with self._lock, self._db() as db:
+            # Uma remoção de agente não pode tornar inválidas as sociedades ativas.
+            if kind == "agents":
+                for society in db.execute("SELECT payload FROM lab_societies"):
+                    if item_id in json.loads(society["payload"]).get("agent_ids", []):
+                        raise ServiceError("O agente pertence a uma sociedade. Retire-o dos membros antes de excluir o perfil.",
+                                           409, code="LAB_AGENT_IN_SOCIETY")
             result = db.execute(f"DELETE FROM {table} WHERE id = ?", (item_id,))
             if result.rowcount == 0:
                 raise ServiceError("Registro não encontrado.", 404, code="LAB_ITEM_NOT_FOUND")

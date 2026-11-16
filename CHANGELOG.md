@@ -1,3 +1,15 @@
+## 2026-11-16 — Behavior: auditabilidade, sociedades, mundos e Checagem Externa
+
+- Incluída `decision_trace` (versão 1) nos eventos de reação para explicar mudança ou estabilidade de opinião, distinguindo componentes numéricos de regras demonstrativas de justificativas declaradas pela IA corporativa.
+- Auditoria didática por reação no feed e no inspetor de agente, com expansão, evidências de rede/contexto e histórico exportável em JSON, CSV e Markdown.
+- Criada aba própria de Sociedades para criação, edição de participantes, inclusão, retirada e cadastro de novo integrante. Bloqueada exclusão de agente ainda vinculado; snapshots e revisões preservados.
+- Campo livre `world_type` para cenários de qualquer domínio; modelos de exemplo seguem opcionais e antigos cadastros mantêm compatibilidade.
+- Catálogo persistente de tipos de entidade (GET/POST/DELETE), proteção de tipos nativos e em uso, validação de payloads e tela para novo tipo.
+- Reprojetada a Checagem Externa para o padrão do ecossistema, preservando caráter descritivo, revisão humana e uso exclusivo de referências agregadas.
+- Removidas classes/atributos duplicados herdados dos contratos Behavior, sem mudança das regras do motor.
+- Testes: 134 backend, 77 verificações estáticas frontend. Build Angular, teste visual e Bridge real pendentes.
+- Documentação: `docs/BEHAVIOR_AUDITORIA_SOCIEDADES_MUNDOS_2026-11-16.md`.
+
 ## 2026-11-16 — Behavior: mapa livre, tempo e diagnóstico da IA corporativa
 
 - Coordenadas editáveis por arraste com mouse/toque e por teclado, normalizadas no SVG para responsividade; posição por sociedade salva localmente no navegador e botão para reorganizar.

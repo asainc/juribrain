@@ -4,9 +4,9 @@ import {ChangeDetectorRef, Component, OnDestroy, OnInit, inject} from '@angular/
 import {FormsModule} from '@angular/forms';
 import {Subscription, forkJoin, interval} from 'rxjs';
 import {BehavioralLabApiService, AgentDraft, SyntheticAgent, EntityType, Environment, EnvironmentDraft, Society, SocietyDraft,
-  LabRun, LabEvent, LabConfiguration, SimulationConfiguration, EnvironmentChange, MetricDefinition, Experiment, ExperimentVariant, Calibration, Revision, DriftCheck} from './behavioral-lab-api.service';
+  LabRun, LabEvent, LabConfiguration, SimulationConfiguration, EnvironmentChange, MetricDefinition, Experiment, ExperimentVariant, Calibration, Revision, DriftCheck, EntityTypeOption, DecisionTrace} from './behavioral-lab-api.service';
 
-type Tab = 'painel'|'agentes'|'ambientes'|'simulacoes'|'resultados'|'intelligence';
+type Tab = 'painel'|'agentes'|'ambientes'|'sociedades'|'simulacoes'|'resultados'|'intelligence';
 interface GraphNode {id:string;name:string;group:string;type:EntityType;x:number;y:number;stance:number;hasReaction:boolean}
 interface GraphEdge {source:string;target:string;weight:number;active:boolean}
 
@@ -46,9 +46,12 @@ export class BehavioralLabPageComponent implements OnInit, OnDestroy {
     {key:'network_density',label:'Densidade da rede'}, {key:'temperature',label:'Temperatura da IA'}];
   readonly tabs:{key:Tab;label:string;number:string}[]=[
     {key:'painel',label:'Studio · Criar',number:'01'}, {key:'agentes',label:'Agentes',number:'02'},
-    {key:'ambientes',label:'Cenários',number:'03'}, {key:'simulacoes',label:'Observatory',number:'04'},
-    {key:'resultados',label:'Resultados',number:'05'}, {key:'intelligence',label:'Intelligence',number:'06'}
+    {key:'ambientes',label:'Mundos',number:'03'}, {key:'sociedades',label:'Sociedades',number:'04'},
+    {key:'simulacoes',label:'Observatory',number:'05'}, {key:'resultados',label:'Resultados',number:'06'},
+    {key:'intelligence',label:'Intelligence',number:'07'}
   ];
+  entityTypes:EntityTypeOption[]=[];newEntityLabel='';newEntityValue='';
+  pendingSocietyAgentId='';societyMemberSearch='';creatingSocietyMember=false;auditExpanded=false;
   agents:SyntheticAgent[]=[];environments:Environment[]=[];societies:Society[]=[];runs:LabRun[]=[];
   configuration:LabConfiguration|null=null;
   selectedRun:LabRun|null=null;
@@ -68,11 +71,6 @@ export class BehavioralLabPageComponent implements OnInit, OnDestroy {
       temperature:0.2,uncertainty:0.2,social_pressure:0.55,shock_probability:0.15,shock_intensity:0.35,
       network_density:0.45,max_tokens_per_reaction:420,memory_window:4};
   }
-  readonly kinds:{value:EntityType;label:string}[]=[
-    {value:'CLIENTE',label:'Cliente'}, {value:'PESSOA',label:'Pessoa'}, {value:'EMPRESA',label:'Empresa'},
-    {value:'GOVERNO',label:'Entidade pública'}, {value:'AGENTE_IA',label:'Agente de IA'},
-    {value:'ORGANIZACAO',label:'Organização / grupo'}, {value:'OUTRO',label:'Outra entidade'}];
-  
   ngOnInit():void {
     this.refresh();
     // Polling curto apenas enquanto houver execução; a API retorna snapshots auditáveis.
@@ -89,14 +87,14 @@ export class BehavioralLabPageComponent implements OnInit, OnDestroy {
   }
   ngOnDestroy():void{this.subscriptions.unsubscribe();}
   private blankAgent():AgentDraft{return {name:'',entity_type:'PESSOA',group:'Geral',goal:'',communication_style:'objetivo',initial_stance:50,influence:.5,susceptibility:.5,characteristics:{}};}
-  private blankEnvironment():EnvironmentDraft{return {name:'',context:'',decision:'',success_criterion:'',target_behavior:'Apoiar a decisão apresentada',low_label:'Resistência',middle_label:'Em avaliação',high_label:'Adesão',low_threshold:40,high_threshold:65,variables:{},events:[],metrics:[],enable_agent_actions:false,allowed_agent_effects:{}};}
+  private blankEnvironment():EnvironmentDraft{return {name:'',world_type:'Personalizado',context:'',decision:'',success_criterion:'',target_behavior:'Apoiar a decisão apresentada',low_label:'Resistência',middle_label:'Em avaliação',high_label:'Adesão',low_threshold:40,high_threshold:65,variables:{},events:[],metrics:[],enable_agent_actions:false,allowed_agent_effects:{}};}
   private blankSociety():SocietyDraft{return {name:'',description:'Grupo de perfis sintéticos',agent_ids:[]};}
 
   refresh():void {
     this.loading=true;
-    this.subscriptions.add(forkJoin({configuration:this.api.configuration(),agents:this.api.agents(),environments:this.api.environments(),societies:this.api.societies(),runs:this.api.runs(),experiments:this.api.experiments()})
+    this.subscriptions.add(forkJoin({configuration:this.api.configuration(),entityTypes:this.api.entityTypes(),agents:this.api.agents(),environments:this.api.environments(),societies:this.api.societies(),runs:this.api.runs(),experiments:this.api.experiments()})
       .subscribe({next:data=>{
-        this.configuration=data.configuration;this.agents=data.agents;this.environments=data.environments;this.societies=data.societies;this.runs=data.runs;this.experiments=data.experiments;
+        this.configuration=data.configuration;this.entityTypes=data.entityTypes;this.agents=data.agents;this.environments=data.environments;this.societies=data.societies;this.runs=data.runs;this.experiments=data.experiments;
         if (!this.sim.environment_id&&data.environments.length)this.sim.environment_id=data.environments[0].id;
         if (!this.sim.society_id&&data.societies.length)this.sim.society_id=data.societies[0].id;
         if(!data.configuration.demo_available)this.sim.mode='bridge';
@@ -139,14 +137,16 @@ export class BehavioralLabPageComponent implements OnInit, OnDestroy {
   }
   removeVariable(key:string):void{const next={...this.environmentDraft.variables};delete next[key];this.environmentDraft.variables=next;}
 
-  editAgent(agent:SyntheticAgent):void{const {id,created_at,updated_at,...body}=agent;this.agentDraft={...body,characteristics:{...body.characteristics}};this.editAgentId=id;}
-  clearAgent():void{this.agentDraft=this.blankAgent();this.editAgentId='';}
+  editAgent(agent:SyntheticAgent):void{this.creatingSocietyMember=false;const {id,created_at,updated_at,...body}=agent;this.agentDraft={...body,characteristics:{...body.characteristics}};this.editAgentId=id;}
+  clearAgent():void{this.agentDraft=this.blankAgent();this.editAgentId='';this.creatingSocietyMember=false;}
   saveAgent():void{
     this.busy=true;this.subscriptions.add(this.api.saveAgent(this.agentDraft,this.editAgentId||undefined).subscribe({
-      next:()=>{this.clearAgent();this.saved('Perfil sintético salvo.');},error:err=>this.showError(err)}));
+      next:agent=>{
+        if(this.creatingSocietyMember){this.toggleSocietyAgent(agent.id,true);this.creatingSocietyMember=false;this.tab='sociedades';}
+        this.clearAgent();this.saved(this.tab==='sociedades'?'Novo integrante selecionado. Salve a sociedade para confirmar a composição.':'Perfil sintético salvo.');},error:err=>this.showError(err)}));
   }
   removeAgent(agent:SyntheticAgent):void{
-    if(!confirm(`Excluir o perfil sintético "${agent.name}"? Sociedades existentes podem precisar de atualização.`))return;
+    if(!confirm(`Excluir o perfil sintético "${agent.name}"? Ele deve ter sido retirado de todas as sociedades.`))return;
     this.busy=true;this.subscriptions.add(this.api.deleteAgent(agent.id).subscribe({next:()=>this.saved('Perfil removido.'),error:err=>this.showError(err)}));
   }
   importAgents(event:Event):void{
@@ -156,7 +156,7 @@ export class BehavioralLabPageComponent implements OnInit, OnDestroy {
   downloadAgents():void{this.api.exportAgents().subscribe({next:blob=>this.download(blob,'agentes_sinteticos.csv'),error:err=>this.showError(err)});}
 
   editEnvironment(env:Environment):void{this.editEnvironmentId=env.id;this.environmentDraft={
-    name:env.name,context:env.context,decision:env.decision,success_criterion:env.success_criterion,
+    name:env.name,world_type:env.world_type||'Personalizado',context:env.context,decision:env.decision,success_criterion:env.success_criterion,
     target_behavior:env.target_behavior||'Apoiar a decisão apresentada',low_label:env.low_label||'Resistência',
     middle_label:env.middle_label||'Em avaliação',high_label:env.high_label||'Adesão',
     low_threshold:env.low_threshold??40,high_threshold:env.high_threshold??65,
@@ -226,15 +226,66 @@ export class BehavioralLabPageComponent implements OnInit, OnDestroy {
   }
   saveEnvironment():void{this.busy=true;this.subscriptions.add(this.api.saveEnvironment(this.environmentDraft,this.editEnvironmentId||undefined).subscribe({next:()=>{this.clearEnvironment();this.saved('Ambiente salvo.');},error:err=>this.showError(err)}));}
   removeEnvironment(env:Environment):void{if(!confirm(`Excluir ambiente "${env.name}"?`))return;this.api.deleteEnvironment(env.id).subscribe({next:()=>this.saved('Ambiente excluído.'),error:err=>this.showError(err)});}
-  editSociety(society:Society):void{this.editSocietyId=society.id;this.societyDraft={name:society.name,description:society.description,agent_ids:[...society.agent_ids]};}
-  clearSociety():void{this.editSocietyId='';this.societyDraft=this.blankSociety();}
+  editSociety(society:Society):void{this.editSocietyId=society.id;this.societyDraft={name:society.name,description:society.description,agent_ids:[...society.agent_ids]};this.tab='sociedades';this.error='';}
+  clearSociety():void{this.editSocietyId='';this.societyDraft=this.blankSociety();this.pendingSocietyAgentId='';this.societyMemberSearch='';}
   societyHas(id:string):boolean{return this.societyDraft.agent_ids.includes(id);}
   toggleSocietyAgent(id:string,checked:boolean):void{
     this.societyDraft.agent_ids=checked?[...this.societyDraft.agent_ids.filter(x=>x!==id),id]:this.societyDraft.agent_ids.filter(x=>x!==id);
   }
   selectAllAgents():void{this.societyDraft.agent_ids=this.agents.slice(0,30).map(a=>a.id);}
-  saveSociety():void{this.busy=true;this.subscriptions.add(this.api.saveSociety(this.societyDraft,this.editSocietyId||undefined).subscribe({next:()=>{this.clearSociety();this.saved('Sociedade salva.');},error:err=>this.showError(err)}));}
+  saveSociety():void{if(this.societyDraft.agent_ids.length<1){this.error='Selecione ao menos um membro.';return;}this.busy=true;this.subscriptions.add(this.api.saveSociety(this.societyDraft,this.editSocietyId||undefined).subscribe({next:()=>{this.clearSociety();this.saved('Sociedade salva.');},error:err=>this.showError(err)}));}
   removeSociety(society:Society):void{if(!confirm(`Excluir sociedade "${society.name}"?`))return;this.api.deleteSociety(society.id).subscribe({next:()=>this.saved('Sociedade excluída.'),error:err=>this.showError(err)});}
+  // A lista salva no próprio banco de dados é compartilhada entre sessões.
+  addCustomEntityType():void {
+    const label=this.newEntityLabel.trim();
+    const value=(this.newEntityValue.trim()||label).normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+      .toUpperCase().replace(/[^A-Z0-9]+/g,'_').replace(/^_+|_+$/g,'');
+    if(label.length<2||label.length>80||!/^[A-Z][A-Z0-9_]{1,47}$/.test(value)){
+      this.error='Informe nome de 2 a 80 caracteres e identificador de 2 a 48 caracteres (letras, números ou _).';return;
+    }
+    this.busy=true;
+    this.api.addEntityType(value,label).subscribe({next:()=>{
+      this.newEntityLabel='';this.newEntityValue='';this.agentDraft.entity_type=value;
+      this.saved('Tipo de entidade cadastrado e disponível para novos agentes.');
+    },error:err=>this.showError(err)});
+  }
+  removeCustomEntityType(item:EntityTypeOption):void {
+    if(item.is_builtin||!confirm(`Excluir o tipo de entidade "${item.label}"?`))return;
+    this.busy=true;
+    this.api.removeEntityType(item.value).subscribe({next:()=>{
+      if(this.agentDraft.entity_type===item.value)this.agentDraft.entity_type='PESSOA';
+      this.saved('Tipo de entidade excluído.');
+    },error:err=>this.showError(err)});
+  }
+  // Operações locais são confirmadas em conjunto quando a sociedade é salva.
+  societyMembers():SyntheticAgent[]{return this.societyDraft.agent_ids.map(id=>this.agents.find(a=>a.id===id)).filter((a):a is SyntheticAgent=>!!a);}
+  availableSocietyMembers():SyntheticAgent[]{const search=this.societyMemberSearch.trim().toLowerCase();
+    return this.agents.filter(a=>!this.societyHas(a.id)&&(!search||[a.name,a.group,a.entity_type].some(v=>v.toLowerCase().includes(search))));}
+  addSocietyMember():void {
+    if(!this.pendingSocietyAgentId||this.societyHas(this.pendingSocietyAgentId))return;
+    if(this.societyDraft.agent_ids.length>=30){this.error='Uma sociedade admite no máximo 30 membros.';return;}
+    this.toggleSocietyAgent(this.pendingSocietyAgentId,true);this.pendingSocietyAgentId='';this.error='';
+  }
+  editSocietyMember(agent:SyntheticAgent):void{this.editAgent(agent);this.tab='agentes';this.notice='Edite o perfil. A associação à sociedade permanece preservada.';}
+  startSocietyMemberCreation():void {this.clearAgent();this.creatingSocietyMember=true;this.tab='agentes';
+    this.notice='Cadastre o novo integrante; ele será incluído na sociedade que está sendo editada.';}
+  // Abre uma sociedade diretamente, sem obrigar o usuário a voltar ao editor de mundos.
+  manageSocieties():void{this.tab='sociedades';this.error='';}
+  inspectedDecisionEvent():LabEvent|null {
+    // Evita exibir a justificativa de um agente diferente daquele selecionado.
+    const selected=this.selectedEvent();
+    return selected?.event_type==='REACTION'&&selected.agent_id===this.selectedAgentId?selected:this.agentReaction();
+  }
+  decisionTrace(event:LabEvent|null):DecisionTrace|null{
+    if(!event||event.event_type!=='REACTION')return null;
+    return event.payload['decision_trace'] as DecisionTrace||null;
+  }
+  traceComponents(trace:DecisionTrace):{label:string;value:number}[]{
+    const labels:Record<string,string>={influencia_social:'Influência da rede',variacao_aleatoria:'Variação simulada',
+      variante:'Variante do cenário',eventos_programados:'Mudanças programadas',choque_aleatorio:'Choque de contexto'};
+    return Object.entries(trace.calculation?.components||{}).map(([key,value])=>({label:labels[key]||key,value}));
+  }
+  signedDelta(value:number):string{return (value>0?'+':'')+value;}
   createExample():void{this.busy=true;this.subscriptions.add(this.api.createExample(this.sampleType).subscribe({next:r=>{
     this.sim.environment_id=r.environment.id;this.sim.society_id=r.society.id;this.clearActiveRun();this.saved('Cenário fictício de exemplo criado.');this.tab='simulacoes';
   },error:err=>this.showError(err)}));}
@@ -575,8 +626,10 @@ export class BehavioralLabPageComponent implements OnInit, OnDestroy {
   inspectExperiment(id:string):void{this.api.experiment(id).subscribe({next:item=>{this.selectedExperiment=item;this.cdr.markForCheck();},error:err=>this.showError(err)});}
   cloneRun():void{if(!this.selectedRun)return;this.sim={...this.selectedRun.configuration};this.tab='simulacoes';this.notice='Configuração carregada. Revise o cenário antes de executar novamente.';}
   submitCalibration():void{
-    if(!this.selectedRun||!this.calibrationSource.trim()||!this.calibrationReviewer.trim()){
-      this.error='Informe a fonte agregada e o responsável pela revisão.';return;
+    if(!this.selectedRun||!this.calibrationSource.trim()||!this.calibrationReviewer.trim()||
+      !Number.isFinite(this.calibrationMean)||this.calibrationMean<0||this.calibrationMean>100||
+      (this.calibrationSampleSize!==null&&(!Number.isInteger(this.calibrationSampleSize)||this.calibrationSampleSize<1))){
+      this.error='Informe fonte, responsável e uma média válida entre 0 e 100. A amostra, se preenchida, deve ser positiva.';return;
     }
     this.busy=true;this.api.calibrate(this.selectedRun.id,this.calibrationMean,this.calibrationSource,
       this.calibrationSampleSize,this.calibrationReviewer).subscribe({next:()=>{

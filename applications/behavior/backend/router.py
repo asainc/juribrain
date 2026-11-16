@@ -12,7 +12,7 @@ from fastapi import APIRouter, File, Query, Request, UploadFile
 from fastapi.responses import Response, StreamingResponse
 from pydantic import ValidationError
 
-from applications.behavior.backend.contracts import AgentInput, EnvironmentInput, SimulationInput, SocietyInput, ExperimentInput, CalibrationInput
+from applications.behavior.backend.contracts import AgentInput, EnvironmentInput, SimulationInput, SocietyInput, ExperimentInput, CalibrationInput, EntityTypeInput
 from applications.behavior.backend.repository import LabRepository
 from applications.behavior.backend.simulator import LabSimulator
 from applications.behavior.backend.experiments import ExperimentOrchestrator
@@ -109,7 +109,7 @@ def create_example(request: Request, tipo: str = Query(default="comunidade", pat
                 for name, entity, group, goal, stance in selected["roles"]]
     agents = [repository.save_item("agents", AgentInput.model_validate(profile).model_dump()) for profile in profiles]
     environment = repository.save_item("environments", EnvironmentInput(
-        name=selected["title"], context=selected["context"], decision=selected["decision"],
+        name=selected["title"], world_type={"comunidade":"Mobilidade e comunidade","mercado":"Mercado e consumo","organizacao":"Mudança organizacional"}[tipo], context=selected["context"], decision=selected["decision"],
         target_behavior=selected["target"], success_criterion=selected["criterion"],
         variables=selected["variables"], events=selected["events"]).model_dump())
     society = repository.save_item("societies", SocietyInput(
@@ -130,11 +130,32 @@ def generate_scenario(body: ScenarioRequest, request: Request) -> dict:
         raise ServiceError("A geração assistida exige gpt_bradesco configurado. Use o editor manual ou o CSV.",
                            503, code="LAB_BRIDGE_UNAVAILABLE")
     proposal = ScenarioGenerator(bridge).propose(body)
+    for agent in proposal.agents:
+        _repository(request).ensure_entity_type(agent.entity_type)
     result = _repository(request).create_scenario_bundle(
         [agent.model_dump() for agent in proposal.agents], proposal.environment.model_dump(),
         proposal.society_name, proposal.society_description,
     )
     return result
+
+
+@router.get("/tipos-entidade")
+def list_entity_types(request: Request) -> list[dict]:
+    """Lista tipos nativos e personalizados sem depender de armazenamento do navegador."""
+    return _repository(request).list_entity_types()
+
+
+@router.post("/tipos-entidade", status_code=201)
+def create_entity_type(body: EntityTypeInput, request: Request) -> dict:
+    """Inclui nova categoria validada no catálogo do Behavior."""
+    return _repository(request).save_entity_type(body.value, body.label)
+
+
+@router.delete("/tipos-entidade/{entity_type}", status_code=204)
+def remove_entity_type(entity_type: str, request: Request) -> Response:
+    """Protege tipos utilizados em agentes e categorias padronizadas."""
+    _repository(request).delete_entity_type(entity_type)
+    return Response(status_code=204)
 
 
 @router.get("/agentes")
@@ -144,12 +165,16 @@ def list_agents(request: Request) -> list[dict]:
 
 @router.post("/agentes", status_code=201)
 def create_agent(body: AgentInput, request: Request) -> dict:
-    return _repository(request).save_item("agents", body.model_dump())
+    repository = _repository(request)
+    repository.ensure_entity_type(body.entity_type)
+    return repository.save_item("agents", body.model_dump())
 
 
 @router.put("/agentes/{agent_id}")
 def update_agent(agent_id: str, body: AgentInput, request: Request) -> dict:
-    return _repository(request).save_item("agents", body.model_dump(), agent_id)
+    repository = _repository(request)
+    repository.ensure_entity_type(body.entity_type)
+    return repository.save_item("agents", body.model_dump(), agent_id)
 
 
 @router.delete("/agentes/{agent_id}", status_code=204)
@@ -214,6 +239,8 @@ async def import_agents(request: Request, file: UploadFile = File(...)) -> dict:
     except (UnicodeDecodeError, ValueError, ValidationError, csv.Error) as exc:
         raise ServiceError("CSV inválido. Verifique UTF-8, campos obrigatórios e limites de valores. " + str(exc)[:220], 422, code="LAB_INVALID_CSV") from None
     repository = _repository(request)
+    for item in prepared:
+        repository.ensure_entity_type(item.entity_type)
     agents = [repository.save_item("agents", item.model_dump()) for item in prepared]
     return {"imported": len(agents), "agents": agents}
 
@@ -333,13 +360,15 @@ def export_run(run_id: str, request: Request, format: str = Query(default="json"
                         headers={"Content-Disposition": f'attachment; filename="simulacao_{run_id}.json"'})
     buffer = io.StringIO()
     writer = csv.writer(buffer)
-    writer.writerow(["rodada", "agente_id", "agente", "posicao", "emocao", "acao", "mensagem", "justificativa", "modo", "semente", "simulacao", "metricas_json"])
+    writer.writerow(["rodada", "agente_id", "agente", "posicao", "posicao_anterior", "variacao", "emocao", "acao", "mensagem", "justificativa", "modo", "semente", "simulacao", "metricas_json", "trilha_decisao_json"])
     for event in run["events"]:
         if event["event_type"] == "REACTION":
             reaction = event["payload"]
+            trace = reaction.get("decision_trace", {})
             writer.writerow([reaction["round"], reaction["agent_id"], _csv_text(reaction["agent_name"]), reaction["stance"],
-                             _csv_text(reaction["emotion"]), _csv_text(reaction["action"]), _csv_text(reaction["message"]),
-                             _csv_text(reaction["reason"]), run["mode"], run["configuration"]["seed"], reaction.get("repetition", 1), _csv_text(json.dumps(reaction.get("metrics", {}), ensure_ascii=False))])
+                             trace.get("previous_stance"), trace.get("delta"), _csv_text(reaction["emotion"]), _csv_text(reaction["action"]), _csv_text(reaction["message"]),
+                             _csv_text(reaction["reason"]), run["mode"], run["configuration"]["seed"], reaction.get("repetition", 1), _csv_text(json.dumps(reaction.get("metrics", {}), ensure_ascii=False)),
+                             _csv_text(json.dumps(trace, ensure_ascii=False))])
     return Response("\ufeff" + buffer.getvalue(), media_type="text/csv; charset=utf-8",
                     headers={"Content-Disposition": f'attachment; filename="simulacao_{run_id}.csv"'})
 
@@ -461,7 +490,18 @@ def report_run(run_id: str, request: Request) -> Response:
              '## Resultados personalizados']
     for metric in metrics:
         lines.append(f'- {metric["label"]}: {json.dumps(metric, ensure_ascii=False)}')
-    lines += ['', '## Rastreabilidade',
+    # Resumo explícito por reação, em vez de atribuir causalidade à justificativa textual.
+    lines += ['', '## Decisões por interação']
+    for event in _repository(request).events(run_id):
+        if event['event_type'] != 'REACTION':
+            continue
+        reaction = event['payload']
+        trace = reaction.get('decision_trace') or {}
+        previous = trace.get('previous_stance', 'Não registrado em versão antiga')
+        lines.append(f'- Rodada {event["round"]} · {reaction["agent_name"]}: {previous} → {reaction["stance"]} '
+                     f'(Δ {trace.get("delta", "n/d")}). Justificativa declarada: {reaction.get("reason", "Não informada")}')
+    lines += ['', 'Nota: justificativas de IA são declarações do modelo; não demonstram causa.',
+              '', '## Rastreabilidade',
               f'Hash de configuração: {summary.get("snapshot_sha256") or "Indisponível"}',
               f'Hash do prompt: {summary.get("prompt_sha256") or "Não aplicável"}', '',
               '## Limitações',

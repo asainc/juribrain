@@ -100,27 +100,41 @@ class LabSimulator:
 
     @staticmethod
     def _demo_reaction(agent: dict, environment: dict, config: dict, prior: dict | None, peers: list[dict],
-                       shock: dict | None, rng: random.Random, changes: list[dict] | None = None) -> Reaction:
+                       shock: dict | None, rng: random.Random, changes: list[dict] | None = None,
+                       trace: dict | None = None) -> Reaction:
         """Modelo de regras didático: nunca inferir que a saída prevê decisões reais.
 
         Atualizações programadas têm impacto parametrizado; aleatoriedade é gerada
         exclusivamente pelo gerador local associado à repetição atual.
         """
         base = prior["stance"] if prior else agent["initial_stance"]
+        components: dict[str, float] = {}
         social_factor = config["social_pressure"] * agent["susceptibility"]
         if peers:
             total = sum(peer["weight"] * peer["influence"] for peer in peers)
             target = sum(peer["stance"] * peer["weight"] * peer["influence"] for peer in peers) / total if total else base
-            base += (target - base) * social_factor
-        base += rng.uniform(-18, 18) * config["uncertainty"]
+            change = (target - base) * social_factor
+            components["influencia_social"] = round(change, 5)
+            base += change
+        change = rng.uniform(-18, 18) * config["uncertainty"]
+        components["variacao_aleatoria"] = round(change, 5)
+        base += change
         # Efeito hipotético e explícito de uma variante; o sistema não deduz
         # causalidade a partir do nome de uma variável textual.
-        base += float(config.get("variant_impact", 0)) * 18 * (0.35 + agent["susceptibility"])
-        for change in changes or []:
-            base += change["impact"] * 18 * (0.35 + agent["susceptibility"])
-        if shock is not None:
-            base += shock["direction"] * 22 * config["shock_intensity"] * (0.35 + agent["susceptibility"])
+        variant_effect = float(config.get("variant_impact", 0)) * 18 * (0.35 + agent["susceptibility"])
+        components["variante"] = round(variant_effect, 5)
+        base += variant_effect
+        event_effect = sum(change["impact"] * 18 * (0.35 + agent["susceptibility"]) for change in changes or [])
+        components["eventos_programados"] = round(event_effect, 5)
+        base += event_effect
+        shock_effect = shock["direction"] * 22 * config["shock_intensity"] * (0.35 + agent["susceptibility"]) if shock else 0
+        components["choque_aleatorio"] = round(shock_effect, 5)
+        base += shock_effect
         stance = int(max(0, min(100, round(base))))
+        if trace is not None:
+            # Componentes observados: detalham a fórmula, inclusive arredondamento e limite 0–100.
+            trace.update({"components": components, "raw_stance": round(base, 5),
+                          "rounding_or_clipping": round(stance - base, 5)})
         target_behavior = environment.get("target_behavior") or "a decisão proposta"
         goal = agent["goal"].rstrip(".")
         if stance >= environment.get("high_threshold", 65):
@@ -146,6 +160,35 @@ class LabSimulator:
         return Reaction(stance=stance, emotion=emotion, action=action, message=message[:900],
                         reason="Reação demonstrativa baseada em estado, rede, parâmetros e eventos fictícios; sem calibração com comportamento real.",
                         environment_updates=updates)
+
+    @staticmethod
+    def decision_trace(agent: dict, reaction: Reaction, prior: dict | None, peers: list[dict],
+                       shock: dict | None, scheduled: list[dict], config: dict,
+                       calculation: dict) -> dict:
+        """Registra evidências observáveis, distinguindo regra calculada de relato da IA.
+
+        Esta trilha explica o que entrou no modelo, não afirma identificar uma
+        causa real de comportamento humano. Nunca persiste prompt ou credenciais.
+        """
+        before = int(prior['stance'] if prior else agent['initial_stance'])
+        delta = reaction.stance - before
+        return {
+            'schema_version': 1,
+            'previous_stance': before, 'current_stance': reaction.stance, 'delta': delta,
+            'changed': delta != 0, 'first_round': prior is None,
+            'peer_signals': [{"agent_id": peer['id'], "name": peer['name'], "stance": peer['stance'],
+                              "weight": peer['weight'], "influence": peer['influence']} for peer in peers],
+            'scheduled_changes': [{"name": change['name'], "impact": change['impact']} for change in scheduled],
+            'shock': {"label": shock['label'], "direction": shock['direction'],
+                      "intensity": shock['intensity']} if shock else None,
+            'source': 'REGRAS_DEMO' if config['mode'] == 'demo' else 'JUSTIFICATIVA_IA',
+            'reason': reaction.reason,
+            'calculation': calculation if config['mode'] == 'demo' else None,
+            'interpretation': ('Componentes numéricos calculados por regras ilustrativas, sem validação empírica.'
+                               if config['mode'] == 'demo' else
+                               'A justificativa é a declaração do modelo. Os sinais listados foram fornecidos, '
+                               'mas não é possível provar quais determinaram a resposta.'),
+        }
 
     @staticmethod
     def evaluate_metrics(reaction: Reaction, environment: dict, mode: str) -> dict:
@@ -407,6 +450,7 @@ class LabSimulator:
                             self.repository.append(run_id, round_index, "INTERACTION", {"message": peer["message"],
                                 "previous_stance": peer["stance"], "weight": peer["weight"], "repetition": repetition},
                                 agent_id=peer["id"], peer_id=agent["id"])
+                        calculation_trace: dict = {}
                         if config["mode"] == "bridge":
                             context_agent = {**agent, 'short_term_memory': memories[agent['id']][-config.get('memory_window', 4):]}
                             reaction, usage = self._bridge_reaction(context_agent, current_environment,
@@ -415,7 +459,7 @@ class LabSimulator:
                         else:
                             usage = {}
                             reaction = self._demo_reaction(agent, current_environment, config, previous.get(agent["id"]),
-                                                           peers, shock, rng, scheduled)
+                                                           peers, shock, rng, scheduled, calculation_trace)
                         # Pausa solicitada durante uma chamada ao modelo: não
                         # acrescentar reação/eventos até retomar.
                         if not self._await_permission(run_id):
@@ -429,7 +473,9 @@ class LabSimulator:
                             raise SimulationValidationError("LAB_ACTION_INVALID")
                         value = {"agent_id": agent["id"], "agent_name": agent["name"], "round": round_index,
                                  "repetition": repetition, **reaction.model_dump(), "metrics": metrics,
-                                 "token_usage": usage, "influenced_by": [p["id"] for p in peers]}
+                                 "token_usage": usage, "influenced_by": [p["id"] for p in peers],
+                                 "decision_trace": self.decision_trace(agent, reaction, previous.get(agent['id']),
+                                                                       peers, shock, scheduled, config, calculation_trace)}
                         current[agent["id"]] = value
                         reactions.append(value)
                         total_reactions += 1

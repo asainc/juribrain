@@ -3,7 +3,8 @@ import {HttpClient} from '@angular/common/http';
 import {inject, Injectable} from '@angular/core';
 import {ApiConfiguration} from '../core/config';
 
-export type EntityType = 'CLIENTE'|'PESSOA'|'EMPRESA'|'GOVERNO'|'AGENTE_IA'|'ORGANIZACAO'|'OUTRO';
+export type EntityType = string;
+export interface EntityTypeOption {value:string;label:string;is_builtin:boolean}
 export interface SyntheticAgent {
   id:string;name:string;entity_type:EntityType;group:string;goal:string;
   communication_style:string;initial_stance:number;influence:number;susceptibility:number;
@@ -19,7 +20,7 @@ export interface Revision {version:number;payload:Record<string,unknown>;sha256:
 export interface DriftCheck {run_id:string;previous_run_id:string|null;current_mean:number;previous_mean:number|null;absolute_difference:number|null;threshold:number;flagged:boolean|null;method_note:string}
 export interface Calibration {id:string;run_id:string;observed_mean:number;simulated_mean:number;absolute_deviation:number;source_description:string;sample_size:number|null;validated_by:string;created_at:string;interpretation:string}
 export interface EnvironmentChange {round:number;name:string;description:string;impact:number;variable_updates:Record<string,string>}
-export interface Environment {id:string;name:string;context:string;decision:string;success_criterion:string;target_behavior:string;
+export interface Environment {id:string;name:string;world_type:string;context:string;decision:string;success_criterion:string;target_behavior:string;
   low_label:string;middle_label:string;high_label:string;low_threshold:number;high_threshold:number;variables:Record<string,string>;events:EnvironmentChange[];metrics:MetricDefinition[];enable_agent_actions:boolean;allowed_agent_effects:Record<string,string[]>}
 export type EnvironmentDraft = Omit<Environment,'id'>;
 export interface Society {id:string;name:string;description:string;agent_ids:string[]}
@@ -30,6 +31,10 @@ export interface SimulationConfiguration {
   shock_intensity:number;network_density:number;max_tokens_per_reaction:number;memory_window:number;
 }
 export interface LabConfiguration {bridge_available:boolean;bridge_status:string;demo_available:boolean;max_agents:number;max_rounds:number;max_repetitions:number;max_model_calls:number;warning:string}
+export interface DecisionTrace {previous_stance:number;current_stance:number;delta:number;changed:boolean;first_round:boolean;
+  peer_signals:{agent_id:string;name:string;stance:number;weight:number;influence:number}[];
+  scheduled_changes:{name:string;impact:number}[];shock:{label:string;direction:number;intensity:number}|null;
+  source:'REGRAS_DEMO'|'JUSTIFICATIVA_IA';reason:string;calculation:{components:Record<string,number>;raw_stance:number;rounding_or_clipping:number}|null;interpretation:string}
 export interface LabEvent {sequence:number;round:number;event_type:'NETWORK'|'SHOCK'|'INTERACTION'|'REACTION'|'ENVIRONMENT_CHANGE'|'REPETITION_STARTED'|'REPETITION_COMPLETED'|'AGENT_ACTION'|'CONVERSATION'|'ROUND_SUMMARY'|'ENVIRONMENT_SNAPSHOT';agent_id:string|null;peer_id:string|null;payload:Record<string,any>;created_at:string}
 export interface RoundSummary {round:number;mean_stance:number;support:number;undecided:number;resistance:number;agents:number}
 export interface RunResult {repetitions_completed?:number;repetitions_planned?:number;repetitions?:{index:number;seed:number;final:RoundSummary|null;rounds:RoundSummary[]}[];final_score_distribution?:{minimum:number;maximum:number;mean:number;standard_deviation:number};interpretation?:string;total_agents:number;total_reactions:number;network_edges:number;rounds:RoundSummary[];final:RoundSummary|null;mean_stance_change?:number;
@@ -48,6 +53,9 @@ export class BehavioralLabApiService {
   private get endpoint():string {return `${this.config.baseUrl}/laboratorio-comportamental`;}
 
   configuration(){return this.http.get<LabConfiguration>(`${this.endpoint}/configuracao`);}
+  entityTypes(){return this.http.get<EntityTypeOption[]>(`${this.endpoint}/tipos-entidade`);}
+  addEntityType(value:string,label:string){return this.http.post<EntityTypeOption>(`${this.endpoint}/tipos-entidade`,{value,label});}
+  removeEntityType(value:string){return this.http.delete<void>(`${this.endpoint}/tipos-entidade/${encodeURIComponent(value)}`);}
   agents(){return this.http.get<SyntheticAgent[]>(`${this.endpoint}/agentes`);}
   environments(){return this.http.get<Environment[]>(`${this.endpoint}/ambientes`);}
   societies(){return this.http.get<Society[]>(`${this.endpoint}/sociedades`);}
