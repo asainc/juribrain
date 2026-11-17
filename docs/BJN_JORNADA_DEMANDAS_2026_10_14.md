@@ -12,18 +12,18 @@ A navegação preserva a identidade visual do BJN, o módulo de minutas e o chat
 1. **Triagem inicial:** escolher uma das cinco opções apresentadas no fluxo. Quando o Banco for parte de processo judicial, informar **autor/réu** e existência de **GCPJ**. Quando a opção não comportar cadastro na equipe, apresentar orientação específica e **não** criar protocolo nem disparar e-mail.
 2. **Cadastro:** fornecer departamento, área, natureza, agência, nome e e-mail do solicitante, cliente e CPF, descrição, título e documentos. Naturezas: Inventário, Alvará, Curatela, Procuração, Pareceres em geral. As quatro primeiras exigem pelo menos um anexo; pareceres gerais permitem anexo opcional. **Atenção:** a inclusão de título e departamento aproveita os campos existentes, sem modificar a referência principal.
 3. **Distribuição:** ao cadastrar, gera um identificador exclusivo. Para naturezas pré-definidas, o status permanece Recebida até atribuição administrativa. Para Pareceres em geral, inicia em Triagem administrativa; um administrador registra se a demanda pertence à equipe. Caso não pertença, marca Encaminhada à área competente; não é feita transmissão externa. Caso pertença, fica disponível para atribuição a advogado autorizado.
-4. **Parecer:** somente o advogado designado pode gerar proposta por `text_generator`. O system prompt está em `prompts/bjn/opinion_draft.system.md`. A IA recebe somente natureza e descrição e não recebe anexos ou os campos estruturados de CPF, cliente ou agência. O advogado edita integralmente o texto, confirma a revisão e publica. O rascunho não aparece ao solicitante. A publicação encerra a demanda e cria registro de notificação.
+4. **Parecer:** somente o advogado designado pode gerar proposta por `text_generator`. O system prompt está em `applications/bjn/prompts/opinion_draft.system.md`. A IA recebe somente natureza e descrição e não recebe anexos ou os campos estruturados de CPF, cliente ou agência. O advogado edita integralmente o texto, confirma a revisão e publica. O rascunho não aparece ao solicitante. A publicação encerra a demanda e cria registro de notificação.
 5. **Consulta:** o solicitante consulta protocolos e pareceres publicados, acompanha status, advogado responsável, histórico e documentos. Pode procurar por protocolo, título, data, agência, nome/e-mail e CPF. A busca por CPF ocorre por **POST**, nunca na URL.
 
 ## Módulos e responsabilidades
 
 | Arquivo | Responsabilidade |
 |---|---|
-| `backend/services/bjn_journey.py` | Decisões de triagem, validade temporária da confirmação e validações por natureza |
-| `backend/services/bjn_demand_store.py` | Repositório SQLite, acesso autorizado, histórico e metadados, parecer, HMAC do CPF e notificações pendentes |
-| `backend/services/bjn_opinion.py` | Chamada `text_generator` com prompt versionado para rascunho |
-| `backend/services/bjn_notifications.py` | Envio SMTP opcional pós-publicação, sem texto do parecer ou documentos |
-| `backend/routers/bjn_demands.py` | Endpoints e autorização por identidade do gateway |
+| `applications/bjn/backend/services/bjn_journey.py` | Decisões de triagem, validade temporária da confirmação e validações por natureza |
+| `applications/bjn/backend/services/bjn_demand_store.py` | Repositório SQLite, acesso autorizado, histórico e metadados, parecer, HMAC do CPF e notificações pendentes |
+| `applications/bjn/backend/services/bjn_opinion.py` | Chamada `text_generator` com prompt versionado para rascunho |
+| `applications/bjn/backend/services/bjn_notifications.py` | Envio SMTP opcional pós-publicação, sem texto do parecer ou documentos |
+| `applications/bjn/backend/routers/bjn_demands.py` | Endpoints e autorização por identidade do gateway |
 | `frontend/src/app/bjn/demands/demand-new.component.ts` | Triagem, cadastro e sugestão inicial da IA |
 | `frontend/src/app/bjn/demands/demand-detail.component.ts` | Revisão de competência, parecer, histórico e central de documentos minimizável |
 | `frontend/src/app/bjn/demands/demand-list.component.ts` | Pesquisa autorizada e filtros |

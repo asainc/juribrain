@@ -9,7 +9,7 @@ from fastapi import HTTPException
 ROOT = Path(__file__).resolve().parents[2]
 CATALOG = ROOT / 'config' / 'catalogo_clausulas_bjn.xlsx'
 MAPPING = ROOT / 'config' / 'bjn_book_image_mappings.json'
-IMAGES = ROOT / 'backend' / 'bjn_book_images'
+IMAGES = ROOT / 'evidence' / 'book_images'
 MAIN_NS = '{http://schemas.openxmlformats.org/spreadsheetml/2006/main}'
 
 

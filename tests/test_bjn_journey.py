@@ -9,7 +9,7 @@ from tempfile import TemporaryDirectory
 from fastapi.testclient import TestClient
 from backend.config import Settings
 from backend.principal import create_app
-from backend.services.bjn_journey import routing_decision, TriageInput
+from applications.bjn.backend.services.bjn_journey import routing_decision, TriageInput
 
 BASE = "/api/v3/bjn/demandas"
 
@@ -119,7 +119,7 @@ def test_opinion_approved_by_assigned_lawyer_and_notified_only_when_configured()
         assert assigned.status_code==200
         assert client.post(f"{BASE}/{uid}/parecer/rascunho",headers=identity()).status_code==403
         # O retorno sintético permite testar a integração sem conectar à API corporativa.
-        from backend.services.bjn_document_opinion import OpinionSuggestion
+        from applications.bjn.backend.services.bjn_document_opinion import OpinionSuggestion
         app.state.bjn_document_opinion.analyze=lambda nature,description,documents: OpinionSuggestion(
             nature, "Minuta sintética provisória a ser integralmente revisada pelo advogado responsável.",
             "hash-teste", "documento-teste", len(documents), ())

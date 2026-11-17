@@ -23,8 +23,8 @@ O identificador da demanda é gerado no servidor. Não é presumido que represen
 | `frontend/src/app/bjn/demands/demand-detail.component.ts` | Acompanhamento, histórico e visualizador incorporado |
 | `frontend/src/app/bjn/demands/demands.scss` | Estilos responsivos |
 | `frontend/src/app/core/bjn-demand-api.service.ts` | Contratos HTTP, uploads e leitura de documentos |
-| `backend/routers/bjn_demands.py` | Rotas de entrada, autenticação da identidade e respostas |
-| `backend/services/bjn_demand_store.py` | Esquema SQLite, controles de acesso, anexos e trilha de eventos |
+| `applications/bjn/backend/routers/bjn_demands.py` | Rotas de entrada, autenticação da identidade e respostas |
+| `applications/bjn/backend/services/bjn_demand_store.py` | Esquema SQLite, controles de acesso, anexos e trilha de eventos |
 | `backend/config.py` | Configurações de armazenamento e advogados habilitados |
 | `tests/test_bjn_demands.py` | Testes de ponta a ponta da API em ambiente isolado |
 

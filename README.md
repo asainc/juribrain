@@ -1,5 +1,34 @@
 # Ecossistema Jurídico
 
+## Chatbot — identificação contextual na conversa (17/11/2026)
+
+O chat flutuante em `/chatbot` agora possui **Tipo de identificador** (GCPJ, Número CNJ, Número ConectaJur) e **Valor do identificador**. Ambos permanecem acessíveis enquanto o histórico rola. Com o GCPJ `12345`, a pergunta `faça um resumo da petição inicial` é enviada como `faça um resumo da petição inicial do gcpj 12345`. Sem valor, a pergunta é enviada sem alterações. O histórico mostra a pergunta digitada e a referência aplicada.
+
+A janela ficou um pouco mais alta, sem perder responsividade; os dois campos são limpos no encerramento de sessão. Não há consulta direta às bases dos sistemas: o complemento é repassado ao workflow Q&A existente. Mais detalhes, testes e limites: [`docs/CHATBOT_CONTEXTUALIZACAO_IDENTIFICADOR_2026-11-17.md`](docs/CHATBOT_CONTEXTUALIZACAO_IDENTIFICADOR_2026-11-17.md).
+
+## Refatoração da organização dos backends (16/11/2026)
+
+Os quatro produtos têm seu próprio diretório em `applications/<produto>/backend/`.
+BJN e Behavior utilizam o contrato `ApiExtension` com `module.py`/`router` e são
+registrados em `applications/registry.py`. Auditoria e Chatbot preservam seu
+isolamento como subaplicações FastAPI montadas em `/services/*`. O `backend/principal.py`
+é o host compartilhado, não inicializa nem importa serviços de negócio BJN.
+
+Os endpoints `/api/v3/bjn/*`, `/services/auditoria/api/v2/*`,
+`/services/chatbot/api/v3/*` e `/api/v3/laboratorio-comportamental/*` não mudaram.
+O `.env` e `gpt_bradesco.py` continuam únicos na raiz. O armazenamento de execução
+continua em `.runtime` (não está no ZIP).
+
+**Migração de importação Python:** altere `from backend.services.bjn_...`
+para `from applications.bjn.backend.services.bjn_...`; para rotas, use
+`applications.bjn.backend.routers`. Scripts de administração e testes já foram
+atualizados. Os catálogos, prompts e imagens do BJN agora ficam sob
+`applications/bjn/` (veja `applications/bjn/README.md`). APIs públicas não foram renomeadas.
+
+Leia `docs/PADRONIZACAO_APLICACOES_2026-11-16.md` para o fluxograma, as decisões,
+o tutorial e a checklist de implantação.
+
+
 ## Behavior — auditoria, sociedades e mundos configuráveis
 
 A cada nova reação, o Behavior registra posição anterior e atual, fatores observáveis (rede, acontecimentos, choques) e justificativa. No modo demonstrativo apresenta a decomposição da fórmula; na IA corporativa, exibe a justificativa declarada pelo modelo e informa que ela **não comprova causalidade**. Clique em uma fala ou agente no Observatory e expanda a auditoria. Registros são exportáveis em JSON, CSV e Markdown.
@@ -59,7 +88,7 @@ Se a instalação continuar falhando, consulte o log local do npm e execute `npm
 - **Solicitante:** agora é uma lista suspensa alimentada pelo arquivo CSV de departamentos; o nome do campo não inclui mais “Departamento”.
 - **Departamento consultado:** aparece como primeira tela de Nova demanda. A escolha **4040 - Jurídico** encaminha à triagem atual, com as opções de ofícios e intimações. Os demais departamentos aguardam configuração de encaminhamento.
 - **Agência bancária:** a pesquisa aceita partes do número ou nome, e o autocomplete utiliza um CSV de duas colunas.
-- **Catálogos:** `data/cadastros/departamentos.csv` inclui a opção 4040 fornecida na especificação. `data/cadastros/agencias.csv` contém somente o cabeçalho; a lista real deve ser preenchida pelo responsável autorizado. Para usar CSVs externos, configure `BJN_DEPARTMENTS_CSV` e `BJN_AGENCIES_CSV` no ambiente.
+- **Catálogos:** `applications/bjn/data/cadastros/departamentos.csv` inclui a opção 4040 fornecida na especificação. `applications/bjn/data/cadastros/agencias.csv` contém somente o cabeçalho; a lista real deve ser preenchida pelo responsável autorizado. Para usar CSVs externos, configure `BJN_DEPARTMENTS_CSV` e `BJN_AGENCIES_CSV` no ambiente.
   - Para consultar e acrescentar departamentos, use `python scripts/manage_bjn_departments.py list` e `python scripts/manage_bjn_departments.py add --code 1234 --name "Unidade Exemplo"` (códigos fictícios). Após salvar, clique **Atualizar lista** na tela. Veja `docs/BJN_ATUALIZACAO_DEPARTAMENTOS_E_SELETORES.md`.
 
 Documentação: `docs/BJN_CADASTROS_DEPARTAMENTOS_AGENCIAS_PARECER_AUTOMATICO.md`.
@@ -114,13 +143,14 @@ Navegador
                     │  proxy Angular /api + /services
                     ▼
             FastAPI único (porta 8000)
-             ├─ backend/ (BJN e API v3 existente)
+             ├─ backend/ (host FastAPI, autorização e configuração central)
+             ├─ applications/bjn/backend/ (API BJN registrada na /api/v3)
              ├─ applications/auditoria/backend/ (FastAPI isolado e motor judicial_calc)
              ├─ applications/chatbot/backend/ (FastAPI isolado e IA documental)
              └─ applications/behavior/backend/ (extensão da API principal)
 ```
 
-Auditoria e Chatbot são **montados em um único processo ASGI** e compartilham somente a infraestrutura HTTP. Contratos Pydantic, configurações, conexões, persistência, endpoints e versões permanecem isolados. Não se misturam dados de auditoria com dados de demandas BJN. O servidor principal inicializa e encerra o ciclo de vida da auditoria explicitamente.
+Auditoria e Chatbot são **montados em um único processo ASGI** e compartilham somente a infraestrutura HTTP. Contratos Pydantic, configurações, conexões, persistência, endpoints e versões permanecem isolados. Não se misturam dados de auditoria com dados de demandas BJN. O servidor principal inicializa e encerra o ciclo de vida dos módulos conforme o registro, sem importar diretamente a lógica do BJN.
 
 ### Onde estão as funcionalidades
 
@@ -128,7 +158,9 @@ Auditoria e Chatbot são **montados em um único processo ASGI** e compartilham 
 - `frontend/src/app/bjn/`: telas BJN originais.
 - `frontend/src/app/auditoria/`: telas e serviços Angular de auditoria; `frontend/src/audit-scoped.scss` mantém seus estilos separados.
 - `frontend/src/app/chatbot/`: tela original de Chatbot/AI Ready, com URL de API independente.
-- `backend/`: BJN e host do ecossistema.
+- `backend/`: servidor hospedeiro, dependências compartilhadas, segurança, configurações e endpoints de compatibilidade do AI Ready.
+- `applications/bjn/`: API BJN (minutas e demandas), serviços, prompts, catálogos, CSVs e evidências no mesmo pacote. Integrada à `/api/v3` por `BjnModule` no registro central.
+- `applications/behavior/backend/`: simulador e API Behavior integrados à `/api/v3` por `BehaviorModule`.
 - `applications/auditoria/backend/` e `applications/auditoria/src/judicial_calc/`: API de auditoria e motor de cálculo sem mudanças nas regras matemáticas.
 - `applications/chatbot/backend/`: API de IA processual independente.
 - `frontend/public/app-config.json`: três URLs de API definidas uma única vez para o frontend.
@@ -182,7 +214,7 @@ As decisões de extração e limites de segurança estão em `docs/HUB_INTELIGEN
 
 Na página `/bjn/demandas`, o gestor pode marcar até 50 demandas em **Todas as demandas** e distribuí-las de uma única vez a advogado autorizado; na aba **Pendentes** vê todas as demandas não encerradas. O advogado vê somente pendências sob sua responsabilidade. Há filtros de data inicial/final (inclusive), advogado (nome conhecido no diretório ou e-mail), agência e solicitante. Para configurar nomes autorizados, adicione `bjn_lawyer_names` ao arquivo privado `config/app.settings.json`, mapeando e-mails da lista `bjn_allowed_lawyers` para nomes exibíveis.
 
-No cadastro, a seleção/upload de PDF pesquisável inicia a identificação de natureza via `text_generator`. Os arquivos de definição ficam em `prompts/bjn/classificacao/*.md`. A aplicação mostra a natureza detectada e atualiza o formulário quando a resposta é um rótulo validado. Não inventa conteúdo em PDFs digitalizados. O backend repete a classificação ao salvar, registra mudanças no histórico e preserva triagem administrativa para `Pareceres em geral`. Erros de IA não impedem o atendimento humano.
+No cadastro, a seleção/upload de PDF pesquisável inicia a identificação de natureza via `text_generator`. Os arquivos de definição ficam em `applications/bjn/prompts/classificacao/*.md`. A aplicação mostra a natureza detectada e atualiza o formulário quando a resposta é um rótulo validado. Não inventa conteúdo em PDFs digitalizados. O backend repete a classificação ao salvar, registra mudanças no histórico e preserva triagem administrativa para `Pareceres em geral`. Erros de IA não impedem o atendimento humano.
 
 **Correção do erro `demands.scss` (21,76 kB):** os estilos compartilhados passaram para o bundle global, retirados de `styleUrl` nos três componentes BJN. O limite Angular de **16 kB por componente** foi mantido, sem aumento artificial. Confira `docs/BJN_DEMANDAS_LOTE_PENDENCIAS_CLASSIFICACAO.md` para arquitetura, endpoints, testes, segurança e pendências de homologação.
 

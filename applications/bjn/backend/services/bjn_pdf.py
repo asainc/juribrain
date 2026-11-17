@@ -27,7 +27,7 @@ def _load_approved_catalog() -> dict:
     if catalog.get("approval_status") != "approved" or not catalog.get("approved_by") or not catalog.get("source_book_sha256"):
         raise HTTPException(409, "Catálogo sem aprovação jurídica ou vínculo verificável ao book.")
     # A origem declarada deve corresponder ao ZIP do book fornecido, sem substituições.
-    source_archive = Path(__file__).resolve().parents[2] / "docs" / "bjn_evidencias" / "book_clausulas.zip"
+    source_archive = Path(__file__).resolve().parents[2] / "evidence" / "sources" / "book_clausulas.zip"
     if not source_archive.is_file() or hashlib.sha256(source_archive.read_bytes()).hexdigest() != catalog["source_book_sha256"]:
         raise HTTPException(409, "O hash do book não corresponde ao arquivo-fonte anexado.")
     clauses = catalog.get("clauses")

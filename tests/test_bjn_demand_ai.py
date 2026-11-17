@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 
 from backend.config import Settings
 from backend.principal import create_app
-from backend.services.bjn_demand_ai import BjnDemandAIService
+from applications.bjn.backend.services.bjn_demand_ai import BjnDemandAIService
 
 BASE = "/api/v3/bjn/demandas"
 SYNTHETIC_DESCRIPTION = "Como localizar o canal interno de consulta e acompanhar uma solicitação de teste?"

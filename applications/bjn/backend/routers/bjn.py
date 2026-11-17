@@ -1,6 +1,6 @@
 """API BJN isolada do chatbot processual."""
 from fastapi import APIRouter, Request, HTTPException, Response
-from backend.services.bjn_rules import Answers, Assessment, assess, workflow
+from applications.bjn.backend.services.bjn_rules import Answers, Assessment, assess, workflow
 from backend.contracts import ChatRequest, ChatResponse
 router = APIRouter(prefix="/bjn", tags=["BJN"])
 @router.get("/questionario")
@@ -28,7 +28,7 @@ def generate_contract_pdf(body: Answers) -> Response:
 @router.post("/previa-clausulas")
 def preview_book_clauses(body: Answers) -> dict:
     """Aplica os vínculos documentados sem exigir o questionário completo."""
-    from backend.services.bjn_book_preview import selected_book_clauses
+    from applications.bjn.backend.services.bjn_book_preview import selected_book_clauses
     schema = workflow()
     by_id = {q["id"]:q for q in schema["questions"]}
     for key,value in body.answers.items():
@@ -42,13 +42,13 @@ def preview_book_clauses(body: Answers) -> dict:
 
 @router.get("/book-evidencia/{filename}")
 def get_book_evidence(filename: str) -> Response:
-    from backend.services.bjn_book_preview import book_image
+    from applications.bjn.backend.services.bjn_book_preview import book_image
     return Response(book_image(filename),media_type="image/jpeg",headers={"Cache-Control":"private, max-age=300"})
 
 @router.get("/catalogo")
 def clause_catalog() -> dict:
     """Permite consultar todos os registros do Excel sem acionar regras não homologadas."""
-    from backend.services.bjn_book_preview import catalog_records
+    from applications.bjn.backend.services.bjn_book_preview import catalog_records
     records = catalog_records()
     return {"total":len(records),"columns":["ID","Tema","Número / título","Texto literal (OCR a conferir)"],
             "status":"OCR_PENDENTE_CONFERENCIA","items":records}

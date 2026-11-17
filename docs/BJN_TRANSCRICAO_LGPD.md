@@ -1,6 +1,6 @@
 # Extração textual LGPD — situação atual
 
-A prévia deixou de exibir fotografias e agora exibe os segmentos textuais registrados no catálogo `config/bjn_lgpd_transcription_draft.json`.
+A prévia deixou de exibir fotografias e agora exibe os segmentos textuais registrados no catálogo `applications/bjn/config/bjn_lgpd_transcription_draft.json`.
 
 **Importante:** transcrição preliminar manual da página 3 do book, ainda sem dupla conferência. O texto não está homologado e NÃO pode ser utilizado na emissão do PDF. As cinco páginas seguintes do Anexo V não foram integralmente transcritas. Até a conclusão dessa tarefa, o painel sinaliza que o conteúdo está incompleto.
 

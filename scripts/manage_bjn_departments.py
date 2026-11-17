@@ -20,7 +20,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from backend.services.bjn_directory import DATA_ROOT, departments  # noqa: E402
+from applications.bjn.backend.services.bjn_directory import DATA_ROOT, departments  # noqa: E402
 
 
 def catalog_path() -> Path:

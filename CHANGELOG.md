@@ -1,3 +1,23 @@
+## 2026-11-17 — Chatbot: identificador contextual fixo na janela de conversa
+
+- Incluídos seletor GCPJ / Número CNJ / Número ConectaJur e entrada do valor no compositor do chat.
+- Contexto opcional anexado ao prompt Q&A por função pura, mantendo intacta a pergunta digitada no histórico e exibindo a referência utilizada.
+- Mensagens e composer separados no layout: histórico rolável, controles sempre visíveis e janela mais alta/responsiva.
+- Proteções contra entrada multiline, valores fora do limite e exceder 8.000 caracteres do contrato Q&A.
+- Sem mudanças no backend, workflow, `.env` central ou outros produtos. Ao encerrar a sessão, o identificador é limpo.
+- Testes: 84/84 frontend (7 novos), 137/137 backend; integração real com Bridge e build Angular completo pendentes de homologação.
+- Decisões e tutorial: `docs/CHATBOT_CONTEXTUALIZACAO_IDENTIFICADOR_2026-11-17.md`.
+
+## 2026-11-16 — Padronização da arquitetura por aplicações
+
+- Refatoração estrutural: todos os produtos agora possuem seu próprio backend em `applications/{bjn,behavior,auditoria,chatbot}/backend`.
+- BJN movido para `applications/bjn`: roteadores, serviços, catálogo Excel, prompts, CSVs e evidências do book. Código e recursos por domínio, sem duplicação na raiz.
+- `BjnModule` usa o mesmo contrato `ApiExtension` de `BehaviorModule`; o registro em `applications/registry.py` controla injeção, inicialização e rotas.
+- Endpoints HTTP e dados existentes preservados; importações Python legadas `backend.services.bjn_*` devem ser migradas para `applications.bjn.backend.services.bjn_*`.
+- Variáveis corporativas continuam no `.env` único; `gpt_bradesco.py` permanece na raiz. As chaves locais e os bancos privados continuam em `.runtime` e não são distribuídos.
+- Testes de integração do registro do BJN e validação da estrutura acrescentados. Documentos atualizados em `docs/PADRONIZACAO_APLICACOES_2026-11-16.md`.
+- **Validação:** 137/137 testes Python e 77/77 testes estruturais do frontend; compilação Angular e conexão real com a Bridge não foram verificadas neste ambiente. Responsável pela homologação: equipe mantenedora / times responsáveis.
+
 ## 2026-11-16 — Behavior: auditabilidade, sociedades, mundos e Checagem Externa
 
 - Incluída `decision_trace` (versão 1) nos eventos de reação para explicar mudança ou estabilidade de opinião, distinguindo componentes numéricos de regras demonstrativas de justificativas declaradas pela IA corporativa.

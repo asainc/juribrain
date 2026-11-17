@@ -12,8 +12,8 @@ from pathlib import Path
 from typing import Sequence
 
 from backend.errors import ServiceError
-from backend.services.bjn_document_opinion import BjnDocumentOpinionService
-from backend.services.bjn_demand_store import SavedDocument
+from applications.bjn.backend.services.bjn_document_opinion import BjnDocumentOpinionService
+from applications.bjn.backend.services.bjn_demand_store import SavedDocument
 
 NATURE_FILES = {
     "Inventário": "inventario.md",
@@ -22,7 +22,7 @@ NATURE_FILES = {
     "Procuração": "procuracao.md",
     "Pareceres em geral": "pareceres_gerais.md",
 }
-PROMPT_PATH = Path(__file__).resolve().parents[2] / "prompts" / "bjn" / "classificacao"
+PROMPT_PATH = Path(__file__).resolve().parents[2] / "prompts" / "classificacao"
 MAX_CLASSIFICATION_FILES = 4
 MAX_CHARS_PER_DOCUMENT = 9000
 logger = logging.getLogger("bjn.nature_classifier")

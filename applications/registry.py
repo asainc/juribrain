@@ -45,4 +45,5 @@ def mounted_applications() -> tuple[MountedApplication, ...]:
 def api_extensions(settings: Settings, bridge: BradescoBridgeClient) -> tuple[ApiExtension, ...]:
     """Registra produtos que usam o gateway e a versão de API do núcleo."""
     from applications.behavior.backend.module import BehaviorModule
-    return (BehaviorModule(settings, bridge),)
+    from applications.bjn.backend.module import BjnModule
+    return (BjnModule(settings, bridge), BehaviorModule(settings, bridge))

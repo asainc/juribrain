@@ -42,8 +42,8 @@ Protocolos legados sem e-mail não recebem e-mail, apenas publicação no portal
 
 ## Arquivos principais
 
-- `backend/routers/bjn_demands.py`: informa simulação local e retorna status de notificação.
-- `backend/services/bjn_demand_store.py`: aceita publicar protocolos legados sem destinatário.
+- `applications/bjn/backend/routers/bjn_demands.py`: informa simulação local e retorna status de notificação.
+- `applications/bjn/backend/services/bjn_demand_store.py`: aceita publicar protocolos legados sem destinatário.
 - `backend/principal.py`: cabeçalhos de simulação apenas em CORS local.
 - `frontend/src/app/core/bjn-demand-api.service.ts`: perfil de teste transitório, cabeçalhos locais.
 - `frontend/src/app/bjn/demands/demand-detail.component.ts`: alternância de perfil, mensagens e publicação.

@@ -1,5 +1,5 @@
 """Testes sintéticos de integração do catálogo ordenado com a prévia BJN."""
-from backend.services.bjn_book_preview import catalog_records, selected_book_clauses
+from applications.bjn.backend.services.bjn_book_preview import catalog_records, selected_book_clauses
 
 
 def test_catalog_preserves_152_unique_records():

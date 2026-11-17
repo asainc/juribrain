@@ -6,7 +6,7 @@ Data da integração: 29/10/2026. Responsable técnico: time mantenedor da aplic
 
 **Contexto**: as três fontes tinham `frontend/src/app/app.component.ts`, `backend/principal.py` e `backend/config.py` homônimos, versões de contrato HTTP distintas e folhas de estilo sobrepostas. Mesclar esses arquivos diretamente criaria colisões e risco de misturar contratos.
 
-**Decisão**: BJN é a base visual e o host FastAPI. Auditoria e Chatbot foram preservados como aplicações FastAPI isoladas em `applications/`. O host as monta em `/services/auditoria` e `/services/chatbot`, mantendo `api/v2` e `api/v3` originais dentro de cada subapp. As rotas BJN seguem em `/api/v3`. Um único Angular possui rotas e página inicial para os três produtos.
+**Decisão histórica (atualizada pelo ADR-009):** BJN era a base visual e o host FastAPI. Auditoria e Chatbot foram preservados como aplicações FastAPI isoladas em `applications/`. O host as monta em `/services/auditoria` e `/services/chatbot`, mantendo `api/v2` e `api/v3` originais dentro de cada subapp. As rotas BJN seguem em `/api/v3`. Um único Angular possui rotas e página inicial para os três produtos.
 
 **Justificativa**: mantém a compatibilidade com a lógica original, elimina portas e servidores independentes, reduz retrabalho e isola regras de cálculo e documentais.
 
@@ -79,3 +79,32 @@ As rotas de BJN e Chatbot não substituem revisão jurídica humana. O frontend 
 **Decisão:** `backend/central_environment.py` fornece o único `.env` da raiz ou um único `APP_ENV_FILE` externo compartilhado por todos os módulos. Auditoria e Chatbot deixam de ter `.env.example` próprio; preservam JSONs de configuração operacional. Todos os adaptadores importam `gpt_bradesco` da raiz, sem cópias da implementação. Behavior recebe a Bridge já inicializada pelo host.
 
 **Justificativa:** credenciais, modelo e workflow Q&A precisam ser alterados uma só vez. **Trade-off:** reiniciar a API para aplicar mudanças; configuração única não equivale a permissão de compartilhar dados pessoais entre módulos. Tokens e senhas não devem ir para cliente web, logs ou repositório.
+
+## ADR-009 — Backends por produto e núcleo livre de domínio BJN (16/11/2026)
+
+**Contexto:** a API principal ainda guardava `backend/routers/bjn*.py`,
+`backend/services/bjn*.py`, catálogo Excel, prompts e evidências do BJN fora de
+`applications/`, embora os demais produtos já tivessem pacotes próprios.
+
+**Decisão:** mover o domínio completo do BJN para `applications/bjn/`, acrescentar
+`applications.bjn.backend.module.BjnModule` e incluí-lo em `api_extensions`
+sem alterar os endereços HTTP. O host apenas injeta configurações e a Bridge,
+executa o ciclo de vida e inclui o router do produto. Os recursos (CSV, prompts,
+catálogo, imagens e documentos-fonte) são resolvidos a partir do pacote BJN,
+independentes do diretório de onde o servidor foi iniciado.
+
+**Padrão para novos produtos:** todo domínio é mantido em `applications/<id>/backend`,
+com entrypoint `module.py` para extensões sob `/api/v3` ou `principal.py`
+quando exigir subaplicação ASGI isolada. O arquivo único de configuração
+corporativa é `.env` na raiz, e a Bridge corporativa permanece compartilhada.
+
+**Compatibilidade e trade-off:** versões antigas que importavam diretamente
+`backend.services.bjn_*` devem usar o novo namespace. Contratos HTTP e dados de
+execução foram preservados. O host continua expondo endpoints legados de
+AI Ready para compatibilidade; sua consolidação futura poderá retirar a
+duplicação, mas não integra o escopo desta migração. Nenhuma lógica jurídica
+ou regra financeira foi alterada.
+
+**Verificações:** executar suíte Python, testes de API, checagem de recursos e
+`npm test`/`npm run build` em ambiente com dependências instaladas. Homologar
+permissões, identidade e integração corporativa antes de publicar.

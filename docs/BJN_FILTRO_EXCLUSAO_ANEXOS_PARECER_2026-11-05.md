@@ -42,8 +42,8 @@ O endpoint anterior `POST .../parecer/publicar` com JSON permanece para compatib
 
 | Arquivo | Entrada principal | Saída |
 |---|---|---|
-| `backend/services/bjn_demand_store.py` | Natureza, exclusão, documentos e ator autenticado | SQL parametrizado, trilha de eventos, metadados e arquivos privados |
-| `backend/routers/bjn_demands.py` | Requisições HTTP validadas | Respostas de consulta, exclusão e publicação multipart |
+| `applications/bjn/backend/services/bjn_demand_store.py` | Natureza, exclusão, documentos e ator autenticado | SQL parametrizado, trilha de eventos, metadados e arquivos privados |
+| `applications/bjn/backend/routers/bjn_demands.py` | Requisições HTTP validadas | Respostas de consulta, exclusão e publicação multipart |
 | `frontend/src/app/core/bjn-demand-api.service.ts` | Filtros e arquivos selecionados | Requisições tipadas |
 | `frontend/src/app/bjn/demands/demand-list.component.ts` | Natureza e justificativa | Lista filtrada e exclusão explicitamente confirmada |
 | `frontend/src/app/bjn/demands/demand-detail.component.ts` | Parecer, anexos e ação de gestão | Publicação revisada e consulta por documento |

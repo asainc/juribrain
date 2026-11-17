@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from backend.services.bjn_directory import departments
+from applications.bjn.backend.services.bjn_directory import departments
 from scripts.manage_bjn_departments import add_department, main
 
 

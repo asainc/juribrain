@@ -14,7 +14,7 @@ from backend.errors import ServiceError
 from backend.services.bradesco_bridge import BradescoBridgeClient
 
 ROOT = Path(__file__).resolve().parents[2]
-PROMPT_FILE = ROOT / "prompts" / "bjn" / "demand_guidance.system.md"
+PROMPT_FILE = ROOT / "prompts" / "demand_guidance.system.md"
 
 
 class DemandGuidanceInput(Contract):

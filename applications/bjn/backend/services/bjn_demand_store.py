@@ -22,7 +22,7 @@ from pydantic import Field, AliasChoices
 
 from backend.contracts.base import Contract
 from backend.errors import ServiceError
-from backend.services.bjn_journey import validate_journey_fields, NATURES
+from applications.bjn.backend.services.bjn_journey import validate_journey_fields, NATURES
 
 STATUS = ("RECEBIDA", "EM_TRIAGEM", "EM_ANALISE", "AGUARDANDO_INFORMACOES", "CONCLUIDA", "CANCELADA", "RESOLVIDA_IA", "TRIAGEM_ADMINISTRATIVA", "ENCAMINHADA_AREA", "PARECER_EM_REVISAO", "EXCLUIDA_ESCOPO")
 

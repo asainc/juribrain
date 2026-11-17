@@ -11,7 +11,7 @@ Essa é a causa identificada no código, não uma confirmação de qual condiç�
 - `frontend/src/app/bjn/demands/demand-new.component.ts`: identifica pendências, permite clicar para focar o campo, exclui envolvidos vazios, verifica sessão no envio e mantém informações em caso de falha.
 - `frontend/src/app/bjn/demands/demands.scss`: apresenta pendências legíveis com o mesmo padrão visual do BJN.
 - `frontend/src/app/bjn/demands/demand-ui.ts`: devolve mensagens diferenciadas para falhas da API; nenhuma credencial ou documento é incluído em erros.
-- `backend/routers/bjn_demands.py`: estrutura o nome de campos inválidos sem revelar seus valores.
+- `applications/bjn/backend/routers/bjn_demands.py`: estrutura o nome de campos inválidos sem revelar seus valores.
 - `frontend/tests/bjn-demands.test.cjs` e `tests/test_bjn_demands.py`: testes de regressão e cadastro com envolvidos opcionais.
 
 ## Critérios de aceitação

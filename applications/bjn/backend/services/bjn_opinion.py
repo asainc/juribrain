@@ -7,7 +7,7 @@ from pathlib import Path
 from backend.errors import ServiceError
 from backend.services.bradesco_bridge import BradescoBridgeClient
 
-PROMPT = Path(__file__).resolve().parents[2] / "prompts" / "bjn" / "opinion_draft.system.md"
+PROMPT = Path(__file__).resolve().parents[2] / "prompts" / "opinion_draft.system.md"
 
 
 class OpinionAIService:

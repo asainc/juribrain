@@ -15,6 +15,7 @@ ecossistema-juridico/
 │   └── services/bradesco_bridge.py     fachada da Bridge da API principal
 ├── applications/
 │   ├── registry.py                     cadastro de módulos e subaplicações
+│   ├── bjn/backend/                    módulo integrado à /api/v3, demandas e minutas
 │   ├── behavior/backend/               módulo integrado à /api/v3
 │   ├── auditoria/backend/              API isolada montada em /services/auditoria
 │   └── chatbot/backend/                API isolada montada em /services/chatbot
@@ -74,10 +75,12 @@ Abra `applications/registry.py` e acrescente o novo módulo à função `api_ext
 ```python
 def api_extensions(settings: Settings, bridge: BradescoBridgeClient) -> tuple[ApiExtension, ...]:
     """Registra módulos que usam o gateway e a API compartilhada."""
+    from applications.bjn.backend.module import BjnModule
     from applications.behavior.backend.module import BehaviorModule
     from applications.triagem.backend.module import TriagemModule
 
     return (
+        BjnModule(settings, bridge),
         BehaviorModule(settings, bridge),
         TriagemModule(settings, bridge),
     )
@@ -143,7 +146,7 @@ export class TriagemApiService {
 
 Para uma subaplicação montada, cadastre/valide seu endpoint em `frontend/public/app-config.json` e `frontend/src/app/core/config.ts` ou construa um registro de endpoints análogo. O proxy existente encaminha `/api` e `/services` para o servidor local.
 
-**Regra de IA:** backend recebe `bridge` já configurado pelo host. **Nunca** duplique `gpt_bradesco.py` ou credenciais em `applications/triagem`. Para prompts, crie `prompts/triagem/*.md` com controle de versão e testes sintéticos; para novos workflows, defina parâmetros de configuração explicitamente aprovados.
+**Regra de IA:** backend recebe `bridge` já configurado pelo host. **Nunca** duplique `gpt_bradesco.py` ou credenciais em `applications/triagem`. Para prompts, crie `applications/triagem/prompts/*.md` com controle de versão e testes sintéticos; para novos workflows, defina parâmetros de configuração explicitamente aprovados.
 
 ## 7. Testar e executar
 
@@ -198,3 +201,12 @@ flowchart TD
 | FastAPI compartilhada + mounts | Mantém contratos de cada produto | Falha fatal pode afetar todos os módulos |
 
 Antes de produção, valide com Segurança, Compliance, Jurídico e DPO os acessos, tratamento de dados, limites de uso, retenção e impactos regulatórios aplicáveis. Preencha o registro de alterações com data, motivo, testes e responsável técnico.
+
+## Organização dos recursos do produto
+
+Mantenha `backend/`, `prompts/`, `config/` e `data/` dentro de `applications/<id>/`
+sempre que forem exclusivos do produto. Nunca fixe caminhos a partir do diretório de
+execução (`Path.cwd()`); para serviços em `applications/<id>/backend/services/`, use
+`Path(__file__).resolve().parents[2]` como raiz do produto.
+O padrão implementado no BJN serve de exemplo. Configurações de credenciais,
+endpoints corporativos e o arquivo `.env` não devem ser duplicados.

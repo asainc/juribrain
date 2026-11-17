@@ -1,6 +1,6 @@
 # Fidelidade ao script BJN
 
-Fonte exclusiva do questionário: `docs/bjn_evidencias/script_bjn.zip` (8 fotografias). Configuração: `config/bjn_script_workflow.json`. Cada campo possui `source_page`, tipo, alternativas e, quando indicada, condição de visibilidade.
+Fonte exclusiva do questionário: `applications/bjn/evidence/sources/script_bjn.zip` (8 fotografias). Configuração: `applications/bjn/config/bjn_script_workflow.json`. Cada campo possui `source_page`, tipo, alternativas e, quando indicada, condição de visibilidade.
 
 O frontend **não** cria perguntas, alternativas, opções “Não sei”, ou bloqueios próprios; consome `GET /bjn/questionario` do backend. O backend rejeita opções não documentadas e campos extras. Uma resposta a campo oculto é inválida. A origem das decisões fica registrada no catálogo.
 

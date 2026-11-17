@@ -15,7 +15,7 @@ python scripts/manage_bjn_departments.py list
 python scripts/manage_bjn_departments.py add --code 1234 --name "Departamento Exemplo"
 ```
 
-O script consulta e atualiza `data/cadastros/departamentos.csv` ou o caminho autorizado pela variável `BJN_DEPARTMENTS_CSV`. Evita códigos repetidos, valida o formato e grava o arquivo por substituição atômica. Requer permissão de escrita; faça backup antes de atualizações corporativas. Não altere o CSV diretamente em múltiplos processos ao mesmo tempo.
+O script consulta e atualiza `applications/bjn/data/cadastros/departamentos.csv` ou o caminho autorizado pela variável `BJN_DEPARTMENTS_CSV`. Evita códigos repetidos, valida o formato e grava o arquivo por substituição atômica. Requer permissão de escrita; faça backup antes de atualizações corporativas. Não altere o CSV diretamente em múltiplos processos ao mesmo tempo.
 
 Alternativamente, edite o CSV como texto UTF-8:
 

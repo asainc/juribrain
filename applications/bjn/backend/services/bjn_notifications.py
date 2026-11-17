@@ -4,7 +4,7 @@ from __future__ import annotations
 import smtplib
 import ssl
 from email.message import EmailMessage
-from backend.services.bjn_demand_store import DemandStore
+from applications.bjn.backend.services.bjn_demand_store import DemandStore
 
 
 def dispatch_notifications(store: DemandStore, settings: object, demand_id: str) -> dict:

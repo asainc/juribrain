@@ -12,7 +12,7 @@ from fastapi.testclient import TestClient
 from backend.config import Settings
 from backend.principal import create_app
 from backend.errors import ServiceError
-from backend.services.bjn_document_opinion import BjnDocumentOpinionService, PROMPTS
+from applications.bjn.backend.services.bjn_document_opinion import BjnDocumentOpinionService, PROMPTS
 
 BASE = "/api/v3/bjn/demandas"
 USER = {"X-Authenticated-User": "solicitante@example.invalid", "X-Authenticated-Role": "solicitante"}
@@ -44,7 +44,7 @@ def test_prompt_especifico_e_documento_validado(nature: str, filename: str) -> N
     bridge = BridgeFake()
     service = BjnDocumentOpinionService(bridge)
     suggestion = service.analyze(nature, "Dúvida de teste sintética", [("teste.pdf", "application/pdf", pdf_sintetico())])
-    text = (Path(__file__).parents[1] / "prompts" / "bjn" / "naturezas" / filename).read_text(encoding="utf-8")
+    text = (Path(__file__).parents[1] / "applications" / "bjn" / "prompts" / "naturezas" / filename).read_text(encoding="utf-8")
     assert text in bridge.prompts[-1]
     assert "Página 1" in bridge.prompts[-1]
     assert suggestion.nature == nature

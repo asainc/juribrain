@@ -17,7 +17,7 @@ import pymupdf
 from backend.errors import ServiceError
 from backend.services.bradesco_bridge import BradescoBridgeClient
 
-PROMPT_DIRECTORY = Path(__file__).resolve().parents[2] / "prompts" / "bjn" / "naturezas"
+PROMPT_DIRECTORY = Path(__file__).resolve().parents[2] / "prompts" / "naturezas"
 PROMPTS = {
     "Inventário": "inventario.system.md",
     "Alvará": "alvara.system.md",

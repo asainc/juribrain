@@ -13,7 +13,7 @@ from fastapi.testclient import TestClient
 
 from backend.config import Settings
 from backend.principal import create_app
-from backend.services.bjn_demand_store import save_upload
+from applications.bjn.backend.services.bjn_demand_store import save_upload
 from backend.errors import ServiceError
 from tests.test_bjn_journey import identity, demand_data
 

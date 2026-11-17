@@ -13,13 +13,13 @@ A geração final continua reservada à revisão, edição, confirmação e publ
 | Componente | Entrada | Saída |
 |---|---|---|
 | `frontend/src/app/bjn/demands/demand-new.component.ts` | Natureza e arquivo selecionado | Prévia textual na Sugestão da IA |
-| `backend/routers/bjn_demands.py` | `POST /api/v3/bjn/demandas/assistente/analisar-documentos`, multipart `nature`, `description`, `files` | Sugestão efêmera, sem protocolo |
-| `backend/services/bjn_document_opinion.py` | Nome, MIME, bytes do PDF, natureza, descrição | Texto da IA, alertas, hashes SHA-256 |
-| `prompts/bjn/naturezas/inventario.system.md` | Natureza Inventário | Prompt especializado |
-| `prompts/bjn/naturezas/alvara.system.md` | Natureza Alvará | Prompt especializado |
-| `prompts/bjn/naturezas/curatela.system.md` | Natureza Curatela | Prompt especializado |
-| `prompts/bjn/naturezas/procuracao.system.md` | Natureza Procuração | Prompt especializado |
-| `backend/services/bjn_demand_store.py` | Sugestão validada e IDs de origem | Tabela `bjn_document_suggestions`, evento de auditoria |
+| `applications/bjn/backend/routers/bjn_demands.py` | `POST /api/v3/bjn/demandas/assistente/analisar-documentos`, multipart `nature`, `description`, `files` | Sugestão efêmera, sem protocolo |
+| `applications/bjn/backend/services/bjn_document_opinion.py` | Nome, MIME, bytes do PDF, natureza, descrição | Texto da IA, alertas, hashes SHA-256 |
+| `applications/bjn/prompts/naturezas/inventario.system.md` | Natureza Inventário | Prompt especializado |
+| `applications/bjn/prompts/naturezas/alvara.system.md` | Natureza Alvará | Prompt especializado |
+| `applications/bjn/prompts/naturezas/curatela.system.md` | Natureza Curatela | Prompt especializado |
+| `applications/bjn/prompts/naturezas/procuracao.system.md` | Natureza Procuração | Prompt especializado |
+| `applications/bjn/backend/services/bjn_demand_store.py` | Sugestão validada e IDs de origem | Tabela `bjn_document_suggestions`, evento de auditoria |
 | `frontend/src/app/bjn/demands/demand-detail.component.ts` | Consulta do protocolo | Sugestão, histórico, visualizador de anexos e editor exclusivo do advogado |
 
 **Pareceres em geral:** mantém a análise orientativa baseada na descrição e a triagem administrativa. Não possui prompt documental especializado nesta mudança.

@@ -11,7 +11,7 @@ from fastapi.testclient import TestClient
 from backend.config import Settings
 from backend.errors import ServiceError
 from backend.principal import create_app
-from backend.services.bjn_directory import agencies, departments
+from applications.bjn.backend.services.bjn_directory import agencies, departments
 from tests.test_bjn_journey import demand_data, identity
 
 BASE = "/api/v3/bjn/demandas"

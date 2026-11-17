@@ -9,7 +9,7 @@ A aplicação habilitava a análise por `BRADESCO_TEXT_MODEL` e não esclarecia 
 ## Correções
 
 1. `backend/services/bradesco_bridge.py`: status explícito de configuração, diferenciando `TEXT_MODEL_MISSING`, `BRIDGE_CREDENTIALS_MISSING` e `CONFIGURED_NOT_TESTED`. O status representa somente a configuração estática; não comprova acesso à rede, implantação ou permissão.
-2. `backend/routers/bjn_demands.py`: `GET /api/v3/bjn/demandas/configuracao` acrescenta `ai_configuration` com `code`/`message`. **Nenhum valor secreto** é retornado.
+2. `applications/bjn/backend/routers/bjn_demands.py`: `GET /api/v3/bjn/demandas/configuracao` acrescenta `ai_configuration` com `code`/`message`. **Nenhum valor secreto** é retornado.
 3. `frontend/src/app/bjn/demands/demand-new.component.ts`: sem mensagem falsa antes da resposta da API, reprocessa arquivos selecionados durante o carregamento, e mostra a causa específica. Continua permitindo cadastro sem IA.
 4. `frontend/src/app/bjn/demands/demand-detail.component.ts`: erros de configuração com a mesma classificação do backend.
 5. `scripts/test_text_generator_connection.py`: modo `--check-only` (não realiza chamadas externas), modo padrão realiza teste sintético contra o serviço corporativo; retorna apenas presença booleana de credenciais.

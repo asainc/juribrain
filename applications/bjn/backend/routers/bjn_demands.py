@@ -8,16 +8,16 @@ from fastapi import APIRouter, File, Form, Query, Request, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import ValidationError, Field
 from backend.contracts.base import Contract
-from backend.services.bjn_demand_ai import DemandGuidanceInput
-from backend.services.bjn_directory import departments, agencies
-from backend.services.bjn_nature_classifier import classify_saved_pdfs
-from backend.services.bjn_document_opinion import PROMPTS, MAX_ANALYSIS_FILES
-from backend.services.bjn_journey import TriageInput, routing_decision, NATURES, CompetenceReview, OpinionPublish, validate_journey_fields, issue_triage_proof, verify_triage_proof
-from backend.services.bjn_notifications import dispatch_notifications
-from backend.services.bjn_demand_store import DEMO_LAWYERS
+from applications.bjn.backend.services.bjn_demand_ai import DemandGuidanceInput
+from applications.bjn.backend.services.bjn_directory import departments, agencies
+from applications.bjn.backend.services.bjn_nature_classifier import classify_saved_pdfs
+from applications.bjn.backend.services.bjn_document_opinion import PROMPTS, MAX_ANALYSIS_FILES
+from applications.bjn.backend.services.bjn_journey import TriageInput, routing_decision, NATURES, CompetenceReview, OpinionPublish, validate_journey_fields, issue_triage_proof, verify_triage_proof
+from applications.bjn.backend.services.bjn_notifications import dispatch_notifications
+from applications.bjn.backend.services.bjn_demand_store import DEMO_LAWYERS
 
 from backend.errors import ErrorField, ServiceError
-from backend.services.bjn_demand_store import (
+from applications.bjn.backend.services.bjn_demand_store import (
     Actor, Assignment, BulkAssignment, ScopeExclusion, DemandCreate, DemandStore, MAX_DOCUMENTS_PER_DEMAND,
     StatusUpdate, SavedDocument, save_upload,
 )

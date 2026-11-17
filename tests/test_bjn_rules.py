@@ -1,5 +1,5 @@
 """Regressão do questionário oficial do script_bjn, sem campos legados inventados."""
-from backend.services.bjn_rules import Answers, assess, is_visible, workflow
+from applications.bjn.backend.services.bjn_rules import Answers, assess, is_visible, workflow
 
 
 def complete_answers(overrides: dict[str, object] | None = None) -> Answers:

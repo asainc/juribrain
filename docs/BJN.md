@@ -24,7 +24,7 @@ O material `book_clausulas.zip` contém apenas 69 fotografias e `script_bjn.zip`
 
 - A única saída contratual permitida é **PDF** (`application/pdf`). Nenhum DOCX é produzido.
 - `POST /bjn/gerar-pdf` responde HTTP 409 até a transcrição integral e a aprovação jurídica da árvore de seleção.
-- `backend/services/bjn_pdf.py` gera PDF a partir de texto literal cadastrado em `config/bjn_clauses_approved.json` (ou `BJN_CLAUSE_CATALOG`).
+- `applications/bjn/backend/services/bjn_pdf.py` gera PDF a partir de texto literal cadastrado em `applications/bjn/config/bjn_clauses_approved.json` (ou `BJN_CLAUSE_CATALOG`).
 - Cada cláusula exige `id`, `source_image`, `text` e `text_sha256`; o catálogo exige `approval_status=approved`, `approved_by` e `source_book_sha256`. Não inserir dados inventados ou textos de exemplo nesse catálogo.
 - A aplicação deve validar também a correspondência de cada transcrição com a fotografia original e vincular sua condição de inclusão a uma regra homologada. O PDF **não é liberado** enquanto essa seleção não estiver implementada; o endpoint permanece bloqueado de propósito.
 - O chatbot não compõe ou edita cláusulas. Os testes usam texto sintético apenas em memória temporária, jamais na minuta real.

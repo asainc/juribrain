@@ -7,13 +7,14 @@ import { firstValueFrom } from 'rxjs';
 import { AiReadyApiService } from './core/ai-ready-api.service';
 import { AiReadyConfiguration, ChatMessage, ProcessWorkspaceResponse, TimelineEvent, DocketSearchHit, DocketAnswer } from './core/contracts';
 import { Notifications } from '../core/notifications';
+import { CHAT_REFERENCE_OPTIONS, MAX_CHAT_REFERENCE_LENGTH, ChatReferenceType, buildContextualChatPrompt } from './core/chat-context';
 
 type LocalDocument = {
   file: File;
   url: string;
 };
 
-type UiChatMessage = ChatMessage;
+type UiChatMessage = ChatMessage & {referenceLabel?: string};
 type HubTab = 'panorama' | 'cronologia' | 'agenda' | 'provas' | 'documentos' | 'perguntas';
 type PreflightItem = {id: string; title: string; help: string};
 type HubShortcut = {tab: HubTab; number: string; title: string; description: string; outcome: string};
@@ -474,6 +475,9 @@ type HubShortcut = {tab: HubTab; number: string; title: string; description: str
               <article class="chat-message" [class.user-message]="message.role === 'user'">
                 <span>{{ message.role === 'user' ? 'Você' : 'AI Ready' }}</span>
                 <p>{{ message.content }}</p>
+                @if (message.referenceLabel) {
+                  <small class="chat-message-reference">Referência enviada: {{ message.referenceLabel }}</small>
+                }
               </article>
             }
             @if (chatLoading()) {
@@ -482,16 +486,41 @@ type HubShortcut = {tab: HubTab; number: string; title: string; description: str
           </div>
 
           <form class="chat-composer" (submit)="sendChat($event)">
-            <textarea
-              [(ngModel)]="chatDraft"
-              name="chatDraft"
-              rows="2"
-              maxlength="8000"
-              [placeholder]="chatAvailable() ? 'Digite sua pergunta para o assistente…' : 'Chat corporativo não configurado'"
-              [disabled]="!chatAvailable() || chatLoading()"
-              (keydown.enter)="onChatEnter($event)"
-            ></textarea>
-            <button class="primary" type="submit" [disabled]="!chatAvailable() || !chatDraft.trim() || chatLoading()">Enviar</button>
+            <div class="chat-context-controls" role="group" aria-label="Identificador de referência para a pergunta">
+              <label for="chat-reference-type">
+                <span>Tipo de identificador</span>
+                <select id="chat-reference-type" name="chatReferenceType"
+                  [(ngModel)]="chatReferenceType" [disabled]="chatLoading()"
+                  (ngModelChange)="chatReferenceError.set('')">
+                  @for (item of chatReferenceOptions; track item.value) {
+                    <option [value]="item.value">{{ item.label }}</option>
+                  }
+                </select>
+              </label>
+              <label for="chat-reference-value">
+                <span>Valor do identificador</span>
+                <input id="chat-reference-value" name="chatReferenceValue" type="text"
+                  [(ngModel)]="chatReferenceValue" [attr.maxlength]="maxChatReferenceLength"
+                  placeholder="Informe o número" autocomplete="off" spellcheck="false"
+                  [disabled]="chatLoading()" (ngModelChange)="chatReferenceError.set('')" />
+              </label>
+            </div>
+            <small class="chat-context-hint">Preencha o valor para acrescentar automaticamente a referência à pergunta. Sem valor, a pergunta é enviada sem complemento.</small>
+            @if (chatReferenceError()) {
+              <p class="chat-context-error" role="alert">{{ chatReferenceError() }}</p>
+            }
+            <div class="chat-composer-row">
+              <textarea
+                [(ngModel)]="chatDraft"
+                name="chatDraft"
+                rows="2"
+                maxlength="8000"
+                [placeholder]="chatAvailable() ? 'Digite sua pergunta para o assistente…' : 'Chat corporativo não configurado'"
+                [disabled]="!chatAvailable() || chatLoading()"
+                (keydown.enter)="onChatEnter($event)"
+              ></textarea>
+              <button class="primary" type="submit" [disabled]="!chatAvailable() || !chatDraft.trim() || chatLoading()">Enviar</button>
+            </div>
           </form>
         </section>
       }
@@ -577,6 +606,11 @@ export class ChatbotPageComponent implements OnDestroy {
   readonly chatLoading = signal(false);
   readonly chatMessages = signal<UiChatMessage[]>([]);
   chatDraft = '';
+  readonly chatReferenceOptions = CHAT_REFERENCE_OPTIONS;
+  readonly maxChatReferenceLength = MAX_CHAT_REFERENCE_LENGTH;
+  readonly chatReferenceError = signal('');
+  chatReferenceType: ChatReferenceType = 'gcpj';
+  chatReferenceValue = '';
 
   readonly suggestedQuestions = [
     'Como organizar a leitura de uma sentença judicial?',
@@ -782,6 +816,9 @@ export class ChatbotPageComponent implements OnDestroy {
     this.questionDraft = '';
     this.searchDraft = '';
     this.chatDraft = '';
+    this.chatReferenceType = 'gcpj';
+    this.chatReferenceValue = '';
+    this.chatReferenceError.set('');
     this.activeTab.set('panorama');
     this.plannedTab.set('panorama');
     this.plannedQuestion.set('');
@@ -839,12 +876,25 @@ export class ChatbotPageComponent implements OnDestroy {
     const question = this.chatDraft.trim();
     if (!this.chatAvailable() || !question || this.chatLoading()) return;
 
-    const previous = this.chatMessages();
-    this.chatMessages.set([...previous, {role: 'user', content: question}]);
+    // Captura o contexto no momento do envio; alterar os campos depois não modifica a solicitação anterior.
+    const referenceType = this.chatReferenceType;
+    const referenceValue = this.chatReferenceValue.trim();
+    let outgoingPrompt: string;
+    try {
+      outgoingPrompt = buildContextualChatPrompt(question, referenceType, referenceValue);
+      this.chatReferenceError.set('');
+    } catch (error) {
+      this.chatReferenceError.set(error instanceof Error ? error.message : 'Identificador inválido.');
+      return;
+    }
+
+    const referenceOption = this.chatReferenceOptions.find(item => item.value === referenceType);
+    const referenceLabel = referenceValue && referenceOption ? `${referenceOption.label}: ${referenceValue}` : undefined;
+    this.chatMessages.update(items => [...items, {role: 'user', content: question, referenceLabel}]);
     this.chatDraft = '';
     this.chatLoading.set(true);
     try {
-      const response = await firstValueFrom(this.api.chat(question));
+      const response = await firstValueFrom(this.api.chat(outgoingPrompt));
       this.chatMessages.update(items => [...items, {role: 'assistant', content: response.resposta}]);
     } catch (error) {
       this.notifications.error(error);

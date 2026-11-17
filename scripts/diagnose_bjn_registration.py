@@ -16,7 +16,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from backend.config import load_settings  # noqa: E402
-from backend.services.bjn_directory import agencies, departments  # noqa: E402
+from applications.bjn.backend.services.bjn_directory import agencies, departments  # noqa: E402
 from backend.errors import ServiceError  # noqa: E402
 
 EXPECTED_TABLES = {

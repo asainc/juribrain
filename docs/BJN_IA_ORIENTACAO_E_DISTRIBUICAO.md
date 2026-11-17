@@ -48,11 +48,11 @@ flowchart TD
 
 | Arquivo | Papel |
 |---|---|
-| `prompts/bjn/demand_guidance.system.md` | Regras de comportamento versionadas, resposta JSON e critérios conservadores |
-| `backend/services/bjn_demand_ai.py` | Valida descrição, faz chamada ao `text_generator`, valida JSON e gera hashes |
+| `applications/bjn/prompts/demand_guidance.system.md` | Regras de comportamento versionadas, resposta JSON e critérios conservadores |
+| `applications/bjn/backend/services/bjn_demand_ai.py` | Valida descrição, faz chamada ao `text_generator`, valida JSON e gera hashes |
 | `backend/services/bradesco_bridge.py` | Integração corporativa existente com `gpt_bradesco.text_generator` |
-| `backend/routers/bjn_demands.py` | Rotas autenticadas e autorização por demanda |
-| `backend/services/bjn_demand_store.py` | SQLite, sugestões, auditoria, distribuição e resolução por confirmação |
+| `applications/bjn/backend/routers/bjn_demands.py` | Rotas autenticadas e autorização por demanda |
+| `applications/bjn/backend/services/bjn_demand_store.py` | SQLite, sugestões, auditoria, distribuição e resolução por confirmação |
 | `frontend/src/app/bjn/demands/demand-new.component.ts` | Sugestão pré-cadastro, sem acionar o Jurídico automaticamente |
 | `frontend/src/app/bjn/demands/demand-detail.component.ts` | Sugestão persistida, confirmação, documentos minimizáveis e advogado fictício |
 | `frontend/src/app/core/bjn-demand-api.service.ts` | Contrato HTTP tipado |

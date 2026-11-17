@@ -6,7 +6,7 @@ from pydantic import SecretStr
 
 from backend.config import Settings
 from backend.principal import create_app
-from backend.services.bjn_demand_store import DEMO_LAWYERS
+from applications.bjn.backend.services.bjn_demand_store import DEMO_LAWYERS
 from tests.test_bjn_journey import BASE, identity, send
 
 
@@ -49,12 +49,12 @@ def test_demo_lawyer_can_review_and_publish_after_admin_assignment():
 
 def test_legacy_demand_publishes_without_notification_email():
     """Não impede parecer manual de demanda pré-existente sem tabela de cadastro."""
-    from backend.services.bjn_demand_store import DemandCreate
+    from applications.bjn.backend.services.bjn_demand_store import DemandCreate
     with TemporaryDirectory() as root:
         app = create_app(Settings(environment="local", bjn_database_path=Path(root)/"db.sqlite3",
                                   bjn_upload_directory=Path(root)/"uploads", bjn_allowed_lawyers=["advogado@example.invalid"]))
         store = app.state.bjn_demand_store
-        from backend.services.bjn_demand_store import Actor
+        from applications.bjn.backend.services.bjn_demand_store import Actor
         requester = Actor("solicitante@example.invalid", "Solicitante sintético", "solicitante")
         created = store.create(DemandCreate(legal_department="Jurídico", consult_area="Agências",
                   service_nature="Pareceres em geral", title="Parecer legado",

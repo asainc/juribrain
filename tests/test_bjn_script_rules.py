@@ -1,6 +1,6 @@
 """Testes com entradas sintéticas para assegurar fidelidade ao script."""
 import pytest
-from backend.services.bjn_rules import Answers, assess, workflow, is_visible
+from applications.bjn.backend.services.bjn_rules import Answers, assess, workflow, is_visible
 
 def test_workflow_only_uses_script_source():
     spec = workflow()

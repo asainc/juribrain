@@ -11,7 +11,7 @@ from fastapi.testclient import TestClient
 
 from backend.config import Settings
 from backend.principal import create_app
-from backend.services.bjn_nature_classifier import BjnNatureClassifier, NATURE_FILES
+from applications.bjn.backend.services.bjn_nature_classifier import BjnNatureClassifier, NATURE_FILES
 from backend.errors import ServiceError
 
 BASE = "/api/v3/bjn/demandas"

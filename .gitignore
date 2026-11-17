@@ -25,4 +25,8 @@ frontend/config/approved-packages.json
 applications/*/.env
 applications/*/.runtime/
 applications/*/data/
+# BJN usa CSVs controlados como recursos de código, não como dados de produção.
+!applications/bjn/data/
+!applications/bjn/data/cadastros/
+!applications/bjn/data/cadastros/*.csv
 applications/*/config/approved-secrets.json
